@@ -12,7 +12,7 @@ enum ProofTheme {
     static let textSecondary = Color(red: 142/255, green: 138/255, blue: 130/255) // #8E8A82
     static let textTertiary = Color(red: 82/255, green: 78/255, blue: 72/255)     // #524E48
 
-    static let accent = Color(red: 218/255, green: 195/255, blue: 130/255)        // #DAC382 (warmer, softer gold)
+    static let accent = Color(red: 235/255, green: 235/255, blue: 230/255)        // #EBEBE6 (warm white)
 
     // Camera overlays — need high contrast on camera feed
     static let overlayPill = Color.black.opacity(0.65)

@@ -19,7 +19,7 @@ struct SessionView: View {
     @State private var currentPose: Pose = .front
     @State private var phase: SessionPhase = .preparing
     @State private var capturedImages: [Pose: UIImage] = [:]
-    @State private var countdownValue: Int = 3
+    @State private var countdownValue: Int = 5
     @State private var showAbortConfirmation = false
 
     @State private var cameraManager = CameraManager()
@@ -141,6 +141,9 @@ struct SessionView: View {
                     capturingOverlay
                 }
             }
+            .task(id: currentPose) {
+                await monitorReadiness()
+            }
 
         case .reviewing:
             reviewingView
@@ -246,12 +249,12 @@ struct SessionView: View {
             Button {
                 Task { await beginCountdown() }
             } label: {
-                Text("Ready")
+                Text("Capture now")
                     .font(.system(size: 15, weight: .light))
-                    .foregroundStyle(ProofTheme.background)
+                    .foregroundStyle(ProofTheme.textSecondary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
-                    .background(ProofTheme.accent)
+                    .background(ProofTheme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
             }
 
@@ -314,6 +317,7 @@ struct SessionView: View {
     // MARK: - Session Flow
 
     private func startSession() async {
+        poseDetector.targetPose = currentPose
         cameraManager.setSampleBufferDelegates([poseDetector, lightingAnalyzer])
         cameraManager.configure()
         cameraManager.startSession()
@@ -324,13 +328,37 @@ struct SessionView: View {
         await audioGuide.speak(currentPose.audioPrompt)
     }
 
+    // MARK: - Auto-Capture Readiness Monitor
+
+    private func monitorReadiness() async {
+        var readyDuration: TimeInterval = 0
+        let checkInterval: TimeInterval = 0.25
+        let requiredDuration: TimeInterval = 1.5
+
+        while !Task.isCancelled && phase == .positioning {
+            if poseDetector.isReady && lightingAnalyzer.quality != .poor {
+                readyDuration += checkInterval
+                if readyDuration >= requiredDuration {
+                    await audioGuide.speakAutoReady()
+                    await beginCountdown()
+                    return
+                }
+            } else {
+                readyDuration = 0
+            }
+            try? await Task.sleep(for: .milliseconds(Int(checkInterval * 1000)))
+        }
+    }
+
     private func beginCountdown() async {
         phase = .countdown
-        countdownValue = 3
+        let seconds = UserDefaults.standard.integer(forKey: "countdownSeconds")
+        let countdownDuration = seconds > 0 ? seconds : 5
+        countdownValue = countdownDuration
 
-        await audioGuide.playCountdown(seconds: 3)
+        await audioGuide.playCountdown(seconds: countdownDuration)
 
-        for i in stride(from: 3, through: 1, by: -1) {
+        for i in stride(from: countdownDuration, through: 1, by: -1) {
             countdownValue = i
             try? await Task.sleep(for: .seconds(1))
         }
@@ -348,6 +376,7 @@ struct SessionView: View {
             capturedImages[currentPose] = first
         }
 
+        ProofTheme.hapticSuccess()
         phase = .reviewing
     }
 
@@ -360,6 +389,7 @@ struct SessionView: View {
     private func acceptAndAdvance() async {
         if let next = currentPose.next {
             currentPose = next
+            poseDetector.targetPose = next
             phase = .positioning
             await audioGuide.speak(currentPose.audioPrompt)
         } else {

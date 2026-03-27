@@ -20,7 +20,8 @@ Standalone iOS app that guides fitness coaching clients through taking consisten
 @~/Desktop/second-brain/ventures/proof/context.md
 
 ## Key Rules
-- Dark mode only (background #0B0B0B, text #F2F0EB, accent gold #E8C547)
+- Dark mode only (background #0C0B09, text #F5F2ED, accent warm white #EBEBE6)
+- NEVER use gold, yellow, or amber as accent color
 - Swiss design: zero decoration, typography-driven hierarchy
 - SF Pro system fonts only — no custom fonts
 - Force dark: `.preferredColorScheme(.dark)` on root view

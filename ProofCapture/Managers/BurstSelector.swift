@@ -1,10 +1,12 @@
 import UIKit
 import CoreImage
+import Vision
 
 struct BurstSelector {
 
-    /// Returns the sharpest image from a burst by measuring edge intensity via Laplacian convolution.
-    static func selectBest(from images: [UIImage]) -> UIImage? {
+    /// Returns the best image from a burst using composite quality scoring.
+    /// For front poses, face quality is weighted heavily. For side/back, sharpness dominates.
+    static func selectBest(from images: [UIImage], pose: Pose = .front) -> UIImage? {
         guard !images.isEmpty else { return nil }
         if images.count == 1 { return images.first }
 
@@ -12,7 +14,19 @@ struct BurstSelector {
         var bestScore: Float = -1
 
         for image in images {
-            let score = sharpnessScore(for: image)
+            let sharpness = sharpnessScore(for: image)
+            let faceQuality: Float = (pose == .front) ? faceQualityScore(for: image) : 0
+
+            // Composite: sharpness always matters, face quality only for front
+            let score: Float = switch pose {
+            case .front:
+                sharpness * 0.4 + faceQuality * 0.6
+            case .side:
+                sharpness * 0.8 + faceQuality * 0.2
+            case .back:
+                sharpness  // Face quality irrelevant for back shots
+            }
+
             if score > bestScore {
                 bestScore = score
                 bestImage = image
@@ -22,16 +36,13 @@ struct BurstSelector {
         return bestImage
     }
 
-    // MARK: - Sharpness measurement
+    // MARK: - Sharpness (Laplacian edge detection)
 
-    /// Applies a 3x3 Laplacian kernel and returns the mean pixel intensity of the result.
-    /// Higher mean = more edges = sharper image.
     private static func sharpnessScore(for image: UIImage) -> Float {
         guard let ciImage = CIImage(image: image) else { return 0 }
 
         let context = CIContext(options: [.useSoftwareRenderer: false])
 
-        // Laplacian kernel: [-1,-1,-1, -1,8,-1, -1,-1,-1]
         let weights: [CGFloat] = [-1, -1, -1, -1, 8, -1, -1, -1, -1]
         let weightVector = CIVector(values: weights, count: 9)
 
@@ -47,7 +58,6 @@ struct BurstSelector {
             return 0
         }
 
-        // Compute the average pixel value of the edge-detected image
         let extent = outputImage.extent
         guard let avgFilter = CIFilter(
             name: "CIAreaAverage",
@@ -65,7 +75,6 @@ struct BurstSelector {
             return 0
         }
 
-        // Read the single-pixel result
         var pixel = [Float](repeating: 0, count: 4)
         context.render(
             avgOutput,
@@ -76,8 +85,30 @@ struct BurstSelector {
             colorSpace: CGColorSpaceCreateDeviceRGB()
         )
 
-        // Use luminance-weighted average of RGB channels
         let score = 0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]
         return abs(score)
+    }
+
+    // MARK: - Face Quality (Vision framework)
+
+    private static func faceQualityScore(for image: UIImage) -> Float {
+        guard let cgImage = image.cgImage else { return 0 }
+
+        let request = VNDetectFaceCaptureQualityRequest()
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up)
+
+        do {
+            try handler.perform([request])
+        } catch {
+            return 0
+        }
+
+        // Return the quality of the first (best) face detected
+        guard let result = request.results?.first,
+              let quality = result.faceCaptureQuality else {
+            return 0
+        }
+
+        return quality
     }
 }

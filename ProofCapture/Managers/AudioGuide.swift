@@ -1,5 +1,6 @@
 import AVFoundation
 import AudioToolbox
+import Foundation
 
 enum GuidanceMode: Int {
     case voice = 0
@@ -40,6 +41,69 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
             speechContinuation = continuation
             synthesizer.speak(utterance)
         }
+    }
+
+    /// Speaks positioning guidance based on current issues. Returns immediately if nothing to say.
+    func speakPositionGuidance(
+        bodyDetected: Bool,
+        positionQuality: QualityLevel,
+        poseMatches: Bool,
+        armsRelaxed: Bool,
+        targetPose: Pose,
+        detectedOrientation: Pose?
+    ) async {
+        guard mode == .voice else { return }
+
+        // Priority 1: No body detected
+        if !bodyDetected {
+            await speak("Step into the frame so I can see you.")
+            return
+        }
+
+        // Priority 2: Wrong orientation
+        if !poseMatches, let detected = detectedOrientation {
+            let guidance = orientationGuidance(target: targetPose, detected: detected)
+            await speak(guidance)
+            return
+        }
+
+        // Priority 3: Arms not relaxed
+        if !armsRelaxed {
+            await speak("Relax your arms at your sides.")
+            return
+        }
+
+        // Priority 4: Position issues (too close/far/off-center)
+        if positionQuality == .poor {
+            // The PoseDetector already provides specific feedback text,
+            // but we provide audio for the most common issues
+            await speak("Adjust your position. Check the screen for guidance.")
+            return
+        }
+    }
+
+    private func orientationGuidance(target: Pose, detected: Pose) -> String {
+        switch (target, detected) {
+        case (.front, .side):
+            return "Turn to face the camera straight on."
+        case (.front, .back):
+            return "You're facing away. Turn around to face the camera."
+        case (.side, .front):
+            return "Turn to your left side. Show your profile to the camera."
+        case (.side, .back):
+            return "Turn a bit more. Show your left side to the camera."
+        case (.back, .front):
+            return "Turn away from the camera. Face the wall behind you."
+        case (.back, .side):
+            return "Turn a bit more. Face completely away from the camera."
+        default:
+            return "Adjust your position for the \(target.title.lowercased()) pose."
+        }
+    }
+
+    /// Announces that the auto-capture is about to begin.
+    func speakAutoReady() async {
+        await speak("Looking good. Capturing in")
     }
 
     /// Plays ascending countdown beeps with 1-second intervals.
