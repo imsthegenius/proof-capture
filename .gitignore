@@ -1,0 +1,4 @@
+Supabase.xcconfig
+*.xcuserdata
+DerivedData/
+.build/
