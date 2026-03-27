@@ -163,24 +163,30 @@ struct SessionView: View {
 
     private var countdownOverlay: some View {
         ZStack {
-            ProofTheme.overlayPill.opacity(0.3)
+            ProofTheme.overlayPill
                 .ignoresSafeArea()
 
-            Text("\(countdownValue)")
-                .font(.system(size: 88, weight: .thin))
-                .foregroundStyle(ProofTheme.accent)
-                .contentTransition(.numericText())
+            ZStack {
+                Circle()
+                    .fill(ProofTheme.overlayPill)
+                    .frame(width: 120, height: 120)
+
+                Text("\(countdownValue)")
+                    .font(.system(size: 88, weight: .thin))
+                    .foregroundStyle(ProofTheme.accent)
+                    .contentTransition(.numericText())
+            }
         }
     }
 
     private var capturingOverlay: some View {
         ZStack {
-            ProofTheme.overlayPill.opacity(0.2)
+            ProofTheme.overlayPill
                 .ignoresSafeArea()
 
             Text("Hold still")
                 .font(.system(size: 20, weight: .light))
-                .foregroundStyle(ProofTheme.textPrimary)
+                .foregroundStyle(.white)
         }
     }
 
