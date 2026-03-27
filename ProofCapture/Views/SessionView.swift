@@ -332,8 +332,10 @@ struct SessionView: View {
 
     private func monitorReadiness() async {
         var readyDuration: TimeInterval = 0
+        var timeSinceLastGuidance: TimeInterval = 0
         let checkInterval: TimeInterval = 0.25
         let requiredDuration: TimeInterval = 1.5
+        let guidanceInterval: TimeInterval = 4.0 // Don't nag more than every 4s
 
         while !Task.isCancelled && phase == .positioning {
             if poseDetector.isReady && lightingAnalyzer.quality != .poor {
@@ -345,6 +347,20 @@ struct SessionView: View {
                 }
             } else {
                 readyDuration = 0
+
+                // Speak position guidance periodically when not ready
+                timeSinceLastGuidance += checkInterval
+                if timeSinceLastGuidance >= guidanceInterval {
+                    timeSinceLastGuidance = 0
+                    await audioGuide.speakPositionGuidance(
+                        bodyDetected: poseDetector.bodyDetected,
+                        positionQuality: poseDetector.positionQuality,
+                        poseMatches: poseDetector.poseMatchesExpected,
+                        armsRelaxed: poseDetector.armsRelaxed,
+                        targetPose: currentPose,
+                        detectedOrientation: poseDetector.detectedOrientation
+                    )
+                }
             }
             try? await Task.sleep(for: .milliseconds(Int(checkInterval * 1000)))
         }
@@ -370,7 +386,7 @@ struct SessionView: View {
         phase = .capturing
 
         let burst = await cameraManager.captureBurst(count: 7)
-        if let best = BurstSelector.selectBest(from: burst) {
+        if let best = BurstSelector.selectBest(from: burst, pose: currentPose) {
             capturedImages[currentPose] = best
         } else if let first = burst.first {
             capturedImages[currentPose] = first
