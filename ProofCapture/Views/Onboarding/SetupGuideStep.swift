@@ -3,6 +3,8 @@ import SwiftUI
 struct SetupGuideStep: View {
     let onNext: () -> Void
 
+    @State private var visibleRows: Set<Int> = []
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
@@ -15,18 +17,21 @@ struct SetupGuideStep: View {
             Spacer()
                 .frame(height: ProofTheme.spacingXXL)
 
-            VStack(alignment: .leading, spacing: ProofTheme.spacingLG) {
+            VStack(alignment: .leading, spacing: ProofTheme.spacingXL) {
                 guideRow(
+                    index: 0,
                     number: "1",
                     title: "Prop your phone up",
                     detail: "Lean it against a wall or shelf at waist height, 5\u{2013}6 feet away."
                 )
                 guideRow(
+                    index: 1,
                     number: "2",
                     title: "Stand under overhead light",
                     detail: "A single light above you creates shadows that show definition."
                 )
                 guideRow(
+                    index: 2,
                     number: "3",
                     title: "Follow the audio guide",
                     detail: "Front, side, back. The app talks you through each pose and captures automatically."
@@ -46,19 +51,26 @@ struct SetupGuideStep: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
                     .background(ProofTheme.accent)
-                    .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
+                    .clipShape(.capsule)
             }
             .padding(.horizontal, ProofTheme.spacingXL)
             .padding(.bottom, ProofTheme.spacingXXL)
         }
+        .onAppear {
+            for i in 0..<3 {
+                withAnimation(.easeOut(duration: 0.4).delay(Double(i) * 0.15)) {
+                    visibleRows.insert(i)
+                }
+            }
+        }
     }
 
-    private func guideRow(number: String, title: String, detail: String) -> some View {
+    private func guideRow(index: Int, number: String, title: String, detail: String) -> some View {
         HStack(alignment: .top, spacing: ProofTheme.spacingMD) {
             Text(number)
-                .font(.system(size: 28, weight: .thin))
+                .font(.system(size: 34, weight: .ultraLight))
                 .foregroundStyle(ProofTheme.accent)
-                .frame(width: 32)
+                .frame(width: 36)
 
             VStack(alignment: .leading, spacing: ProofTheme.spacingXS) {
                 Text(title)
@@ -68,8 +80,10 @@ struct SetupGuideStep: View {
                 Text(detail)
                     .font(.system(size: 13, weight: .light))
                     .foregroundStyle(ProofTheme.textSecondary)
-                    .lineSpacing(2)
+                    .lineSpacing(4)
             }
         }
+        .opacity(visibleRows.contains(index) ? 1 : 0)
+        .offset(y: visibleRows.contains(index) ? 0 : 12)
     }
 }

@@ -17,12 +17,13 @@ struct PermissionStep: View {
                 .font(.system(size: 15, weight: .light))
                 .foregroundStyle(ProofTheme.textSecondary)
                 .multilineTextAlignment(.center)
-                .lineSpacing(4)
+                .lineSpacing(6)
                 .padding(.top, ProofTheme.spacingMD)
 
             Spacer()
 
             Button(action: {
+                ProofTheme.hapticLight()
                 Task {
                     let status = AVCaptureDevice.authorizationStatus(for: .video)
                     if status == .notDetermined {
@@ -32,13 +33,13 @@ struct PermissionStep: View {
                     onComplete()
                 }
             }) {
-                Text("Allow camera")
+                Text("Continue")
                     .font(.system(size: 15, weight: .light))
                     .foregroundStyle(ProofTheme.background)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
                     .background(ProofTheme.accent)
-                    .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
+                    .clipShape(.capsule)
             }
             .padding(.horizontal, ProofTheme.spacingXL)
             .padding(.bottom, ProofTheme.spacingXXL)

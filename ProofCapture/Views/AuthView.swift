@@ -10,8 +10,8 @@ struct AuthView: View {
                 .frame(height: ProofTheme.spacingXXL * 2)
 
             Text("PROOF")
-                .font(.system(size: 34, weight: .light))
-                .tracking(6)
+                .font(.system(size: 60, weight: .ultraLight))
+                .tracking(12)
                 .foregroundStyle(ProofTheme.textPrimary)
 
             Text("Progress photos, done right.")
@@ -21,7 +21,7 @@ struct AuthView: View {
 
             Spacer()
 
-            VStack(spacing: ProofTheme.spacingLG) {
+            VStack(spacing: ProofTheme.spacingXL) {
                 featureRow(icon: "camera.viewfinder", text: "Guided front, side, back poses")
                 featureRow(icon: "waveform", text: "Voice coaching — hands-free capture")
                 featureRow(icon: "icloud.and.arrow.up", text: "Private cloud backup")
@@ -37,12 +37,12 @@ struct AuthView: View {
             }
             .signInWithAppleButtonStyle(.white)
             .frame(height: 48)
-            .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
+            .clipShape(.capsule)
             .padding(.horizontal, ProofTheme.spacingXL)
 
             Text("Sign in to back up your progress photos")
                 .font(.system(size: 13, weight: .light))
-                .foregroundStyle(ProofTheme.textTertiary)
+                .foregroundStyle(ProofTheme.textSecondary)
                 .padding(.top, ProofTheme.spacingMD)
 
             Spacer()
@@ -56,7 +56,7 @@ struct AuthView: View {
         HStack(spacing: ProofTheme.spacingMD) {
             Image(systemName: icon)
                 .font(.system(size: 17, weight: .light))
-                .foregroundStyle(ProofTheme.textTertiary)
+                .foregroundStyle(ProofTheme.accent)
                 .frame(width: 28)
             Text(text)
                 .font(.system(size: 15, weight: .light))

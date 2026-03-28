@@ -15,6 +15,7 @@ enum ProofTheme {
     static let accent = Color(red: 250/255, green: 250/255, blue: 252/255)        // #FAFAFC (cool white)
 
     // Camera overlays — need high contrast on camera feed
+    // Legacy — prefer .glassEffect() for new views
     static let overlayPill = Color.black.opacity(0.65)
     static let overlayText = Color.white
 
@@ -47,5 +48,38 @@ enum ProofTheme {
 
     static func hapticSuccess() {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    // MARK: - Glass Effects (iOS 26)
+
+    /// Standard glass pill for camera overlays — replaces opaque black pills
+    static let glassOverlay = Color.clear // Use .glassEffect() modifier instead of background color
+
+    // MARK: - Button Styles
+
+    /// Primary action button style matching the app's design language
+    struct ProofButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .font(.system(size: 15, weight: .light))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .glassEffect(.regular.interactive(), in: .capsule)
+                .opacity(configuration.isPressed ? 0.8 : 1.0)
+        }
+    }
+
+    /// Secondary/ghost button style
+    struct ProofSecondaryButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .font(.system(size: 15, weight: .light))
+                .foregroundStyle(ProofTheme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .glassEffect(.regular, in: .capsule)
+                .opacity(configuration.isPressed ? 0.8 : 1.0)
+        }
     }
 }

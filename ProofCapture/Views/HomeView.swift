@@ -20,7 +20,7 @@ struct HomeView: View {
                 NavigationLink(destination: SettingsView()) {
                     Image(systemName: "gearshape")
                         .font(.system(size: 17, weight: .light))
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .foregroundStyle(ProofTheme.accent)
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Settings")
@@ -41,6 +41,9 @@ struct HomeView: View {
                     .padding(.top, ProofTheme.spacingXS)
             } else {
                 VStack(spacing: ProofTheme.spacingSM) {
+                    Image(systemName: "iphone.rear.camera")
+                        .font(.system(size: 28, weight: .ultraLight))
+                        .foregroundStyle(ProofTheme.textTertiary)
                     Text("Prop your phone up")
                         .font(.system(size: 17, weight: .light))
                         .foregroundStyle(ProofTheme.textSecondary)
@@ -58,30 +61,38 @@ struct HomeView: View {
                 VStack(spacing: ProofTheme.spacingSM) {
                     ZStack {
                         Circle()
-                            .fill(ProofTheme.accent)
-                            .frame(width: 80, height: 80)
+                            .stroke(ProofTheme.accent, lineWidth: 2)
+                            .frame(width: 88, height: 88)
 
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 24, weight: .light))
-                            .foregroundStyle(ProofTheme.background)
+                        Image(systemName: "camera")
+                            .font(.system(size: 28, weight: .ultraLight))
+                            .foregroundStyle(ProofTheme.accent)
                             .accessibilityHidden(true)
                     }
 
                     Text("Start Session")
-                        .font(.system(size: 13, weight: .light))
+                        .font(.system(size: 15, weight: .light))
                         .foregroundStyle(ProofTheme.textSecondary)
                 }
             }
             .accessibilityLabel("Start photo session")
+            .simultaneousGesture(TapGesture().onEnded { ProofTheme.hapticLight() })
 
             Spacer()
 
-            // Bottom links
+            // History link
             NavigationLink(destination: HistoryView()) {
-                Text("History")
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundStyle(ProofTheme.textTertiary)
-                    .frame(minHeight: 44)
+                HStack {
+                    Text("History")
+                        .font(.system(size: 15, weight: .light))
+                        .foregroundStyle(ProofTheme.textSecondary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .light))
+                        .foregroundStyle(ProofTheme.textTertiary)
+                }
+                .frame(height: 52)
+                .padding(.horizontal, ProofTheme.spacingMD)
             }
             .padding(.bottom, ProofTheme.spacingXL)
         }

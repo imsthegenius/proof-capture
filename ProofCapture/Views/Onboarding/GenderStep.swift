@@ -38,7 +38,7 @@ struct GenderStep: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
                     .background(ProofTheme.accent)
-                    .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
+                    .clipShape(.capsule)
             }
             .padding(.horizontal, ProofTheme.spacingXL)
             .padding(.bottom, ProofTheme.spacingXXL)
@@ -46,17 +46,34 @@ struct GenderStep: View {
     }
 
     private func genderButton(label: String, value: Int) -> some View {
-        Button {
+        let isSelected = genderRaw == value
+        return Button {
             ProofTheme.hapticLight()
-            genderRaw = value
+            withAnimation(.easeInOut(duration: 0.2)) {
+                genderRaw = value
+            }
         } label: {
-            Text(label)
-                .font(.system(size: 17, weight: .light))
-                .foregroundStyle(genderRaw == value ? ProofTheme.background : ProofTheme.textPrimary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(genderRaw == value ? ProofTheme.accent : ProofTheme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
+            HStack(spacing: ProofTheme.spacingSM) {
+                Text(label)
+                    .font(.system(size: 17, weight: .light))
+                    .foregroundStyle(isSelected ? ProofTheme.background : ProofTheme.textPrimary)
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 13, weight: .light))
+                        .foregroundStyle(ProofTheme.background)
+                        .transition(.opacity)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 72)
+            .background(isSelected ? ProofTheme.accent : ProofTheme.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
+                    .strokeBorder(isSelected ? Color.clear : ProofTheme.separator, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
+            .scaleEffect(isSelected ? 1.02 : 1.0)
         }
     }
 }
