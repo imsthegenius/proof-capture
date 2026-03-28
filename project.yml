@@ -2,7 +2,7 @@ name: ProofCapture
 options:
   bundleIdPrefix: com.proof
   deploymentTarget:
-    iOS: "26.0"
+    iOS: "17.0"
   xcodeVersion: "16.0"
   developmentLanguage: en
   createIntermediateGroups: true

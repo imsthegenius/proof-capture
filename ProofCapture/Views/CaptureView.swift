@@ -27,7 +27,7 @@ struct CaptureView: View {
                             .font(.system(size: 15, weight: .light))
                             .foregroundStyle(.white)
                             .frame(width: 44, height: 44)
-                            .glassEffect(.regular, in: .circle)
+                            .modifier(GlassCircle())
                     }
                     .accessibilityLabel("Switch camera")
 
@@ -40,7 +40,7 @@ struct CaptureView: View {
                                 .font(.system(size: 15, weight: .light))
                                 .foregroundStyle(.white)
                                 .frame(width: 44, height: 44)
-                                .glassEffect(.regular, in: .circle)
+                                .modifier(GlassCircle())
                         }
                         .accessibilityLabel(cameraManager.isTorchOn ? "Turn off torch" : "Turn on torch")
                     }
@@ -62,7 +62,7 @@ struct CaptureView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, ProofTheme.spacingMD)
                     .padding(.vertical, ProofTheme.spacingSM)
-                    .glassEffect(.regular, in: .capsule)
+                    .modifier(GlassCapsule())
                     .padding(.horizontal, ProofTheme.spacingLG)
                     .padding(.bottom, ProofTheme.spacingMD)
             }
@@ -85,7 +85,7 @@ struct CaptureView: View {
         }
         .padding(.horizontal, ProofTheme.spacingMD)
         .padding(.vertical, ProofTheme.spacingSM)
-        .glassEffect(.regular, in: .capsule)
+        .modifier(GlassCapsule())
     }
 
     private func statusIndicator(quality: QualityLevel, label: String) -> some View {
@@ -106,6 +106,30 @@ struct CaptureView: View {
         case .good: ProofTheme.statusGood
         case .fair: ProofTheme.statusFair
         case .poor: ProofTheme.statusPoor
+        }
+    }
+}
+
+private struct GlassCircle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.glassEffect(.regular, in: .circle)
+        } else {
+            content
+                .background(Color.black.opacity(0.65))
+                .clipShape(Circle())
+        }
+    }
+}
+
+private struct GlassCapsule: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.glassEffect(.regular, in: .capsule)
+        } else {
+            content
+                .background(Color.black.opacity(0.65))
+                .clipShape(.capsule)
         }
     }
 }

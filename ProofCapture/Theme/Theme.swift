@@ -15,7 +15,7 @@ enum ProofTheme {
     static let accent = Color(red: 250/255, green: 250/255, blue: 252/255)        // #FAFAFC (cool white)
 
     // Camera overlays — need high contrast on camera feed
-    // Legacy — prefer .glassEffect() for new views
+    // Glass effects available on iOS 26+, use overlayPill as fallback
     static let overlayPill = Color.black.opacity(0.65)
     static let overlayText = Color.white
 
@@ -50,14 +50,8 @@ enum ProofTheme {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
-    // MARK: - Glass Effects (iOS 26)
-
-    /// Standard glass pill for camera overlays — replaces opaque black pills
-    static let glassOverlay = Color.clear // Use .glassEffect() modifier instead of background color
-
     // MARK: - Button Styles
 
-    /// Primary action button style matching the app's design language
     struct ProofButtonStyle: ButtonStyle {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
@@ -65,12 +59,11 @@ enum ProofTheme {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .glassEffect(.regular.interactive(), in: .capsule)
+                .modifier(PrimaryButtonBackground())
                 .opacity(configuration.isPressed ? 0.8 : 1.0)
         }
     }
 
-    /// Secondary/ghost button style
     struct ProofSecondaryButtonStyle: ButtonStyle {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
@@ -78,8 +71,33 @@ enum ProofTheme {
                 .foregroundStyle(ProofTheme.textSecondary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .glassEffect(.regular, in: .capsule)
+                .modifier(SecondaryButtonBackground())
                 .opacity(configuration.isPressed ? 0.8 : 1.0)
+        }
+    }
+
+    // Background modifiers with iOS 26 glass / iOS 17 fallback
+    struct PrimaryButtonBackground: ViewModifier {
+        func body(content: Content) -> some View {
+            if #available(iOS 26, *) {
+                content.glassEffect(.regular.interactive(), in: .capsule)
+            } else {
+                content
+                    .background(ProofTheme.accent)
+                    .clipShape(.capsule)
+            }
+        }
+    }
+
+    struct SecondaryButtonBackground: ViewModifier {
+        func body(content: Content) -> some View {
+            if #available(iOS 26, *) {
+                content.glassEffect(.regular, in: .capsule)
+            } else {
+                content
+                    .background(ProofTheme.surface)
+                    .clipShape(.capsule)
+            }
         }
     }
 }
