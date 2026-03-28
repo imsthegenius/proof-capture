@@ -205,7 +205,7 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         let bgBrightness = regionBrightness(of: bgImage, in: extent)
 
         // Backlit if background is substantially brighter than the person
-        return bgBrightness > personBrightness + 0.12
+        return bgBrightness > personBrightness + 0.25
     }
 
     // MARK: - Composite assessment
@@ -225,7 +225,7 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         // Priority: critical problems first, then quality assessment
 
         if isBacklit {
-            return Assessment(quality: .poor, feedback: "Backlit \u{2014} move away from the window behind you")
+            return Assessment(quality: .poor, feedback: "Strong light behind you \u{2014} try a different angle")
         }
 
         if exposure.isTooDark {

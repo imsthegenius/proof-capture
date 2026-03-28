@@ -7,6 +7,30 @@ struct CaptureView: View {
     let lightingAnalyzer: LightingAnalyzer
     let currentPose: Pose
 
+    private var overallStatus: QualityLevel {
+        if !poseDetector.bodyDetected { return .poor }
+        if lightingAnalyzer.quality == .poor && poseDetector.positionQuality == .poor { return .poor }
+        if poseDetector.isReady && lightingAnalyzer.quality != .poor { return .good }
+        if poseDetector.positionQuality == .good || poseDetector.poseMatchesExpected { return .fair }
+        return .poor
+    }
+
+    private var statusWord: String {
+        switch overallStatus {
+        case .good: "READY"
+        case .fair: "ALMOST"
+        case .poor: poseDetector.bodyDetected ? "ADJUST" : "STEP IN"
+        }
+    }
+
+    private var statusColor: Color {
+        switch overallStatus {
+        case .good: ProofTheme.statusGood
+        case .fair: ProofTheme.statusFair
+        case .poor: ProofTheme.statusPoor
+        }
+    }
+
     var body: some View {
         ZStack {
             CameraPreview(session: cameraManager.session)
@@ -14,8 +38,27 @@ struct CaptureView: View {
 
             PoseGuideOverlay(poseDetector: poseDetector)
 
+            // Central status ring — readable from 2 meters
+            VStack(spacing: ProofTheme.spacingSM) {
+                ZStack {
+                    Circle()
+                        .stroke(statusColor.opacity(0.6), lineWidth: 3)
+                        .frame(width: 140, height: 140)
+
+                    Text(statusWord)
+                        .font(.system(size: 34, weight: .light))
+                        .foregroundStyle(statusColor)
+                }
+
+                // Pose label — small but useful if close enough
+                Text(currentPose.title.uppercased())
+                    .font(.system(size: 13, weight: .light))
+                    .tracking(4)
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+
+            // Camera flip — top right, larger touch target
             VStack {
-                // Top controls — camera flip + torch
                 HStack {
                     Spacer()
 
@@ -24,88 +67,18 @@ struct CaptureView: View {
                         cameraManager.switchCamera()
                     } label: {
                         Image(systemName: "camera.rotate")
-                            .font(.system(size: 15, weight: .light))
+                            .font(.system(size: 17, weight: .light))
                             .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
+                            .frame(width: 52, height: 52)
                             .modifier(GlassCircle())
                     }
                     .accessibilityLabel("Switch camera")
-
-                    if cameraManager.currentPosition == .back {
-                        Button {
-                            ProofTheme.hapticLight()
-                            cameraManager.toggleTorch()
-                        } label: {
-                            Image(systemName: cameraManager.isTorchOn ? "flashlight.on.fill" : "flashlight.off.fill")
-                                .font(.system(size: 15, weight: .light))
-                                .foregroundStyle(.white)
-                                .frame(width: 44, height: 44)
-                                .modifier(GlassCircle())
-                        }
-                        .accessibilityLabel(cameraManager.isTorchOn ? "Turn off torch" : "Turn on torch")
-                    }
                 }
                 .padding(.horizontal, ProofTheme.spacingMD)
                 .padding(.top, ProofTheme.spacingSM)
 
                 Spacer()
-
-                // Status indicators on dark pills
-                statusBar
-                    .padding(.horizontal, ProofTheme.spacingMD)
-                    .padding(.bottom, ProofTheme.spacingSM)
-
-                // Instruction on glass pill
-                Text(currentPose.instruction)
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, ProofTheme.spacingMD)
-                    .padding(.vertical, ProofTheme.spacingSM)
-                    .modifier(GlassCapsule())
-                    .padding(.horizontal, ProofTheme.spacingLG)
-                    .padding(.bottom, ProofTheme.spacingMD)
             }
-        }
-    }
-
-    private var statusBar: some View {
-        HStack(spacing: ProofTheme.spacingMD) {
-            statusIndicator(
-                quality: lightingAnalyzer.quality,
-                label: lightingAnalyzer.feedback
-            )
-
-            Spacer()
-
-            statusIndicator(
-                quality: poseDetector.positionQuality,
-                label: poseDetector.feedback
-            )
-        }
-        .padding(.horizontal, ProofTheme.spacingMD)
-        .padding(.vertical, ProofTheme.spacingSM)
-        .modifier(GlassCapsule())
-    }
-
-    private func statusIndicator(quality: QualityLevel, label: String) -> some View {
-        HStack(spacing: ProofTheme.spacingXS) {
-            Circle()
-                .fill(colorForQuality(quality))
-                .frame(width: 8, height: 8)
-
-            Text(label)
-                .font(.system(size: 12, weight: .light))
-                .foregroundStyle(.white.opacity(0.9))
-                .lineLimit(1)
-        }
-    }
-
-    private func colorForQuality(_ quality: QualityLevel) -> Color {
-        switch quality {
-        case .good: ProofTheme.statusGood
-        case .fair: ProofTheme.statusFair
-        case .poor: ProofTheme.statusPoor
         }
     }
 }
@@ -116,20 +89,8 @@ private struct GlassCircle: ViewModifier {
             content.glassEffect(.regular, in: .circle)
         } else {
             content
-                .background(Color.black.opacity(0.65))
+                .background(Color.black.opacity(0.5))
                 .clipShape(Circle())
-        }
-    }
-}
-
-private struct GlassCapsule: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content.glassEffect(.regular, in: .capsule)
-        } else {
-            content
-                .background(Color.black.opacity(0.65))
-                .clipShape(.capsule)
         }
     }
 }

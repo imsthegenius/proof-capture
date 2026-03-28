@@ -20,8 +20,8 @@ struct PoseGuideOverlay: View {
     private func targetSilhouette(in size: CGSize) -> some View {
         RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
             .stroke(
-                ProofTheme.textTertiary.opacity(0.4),
-                style: StrokeStyle(lineWidth: 1, dash: [8, 6])
+                ProofTheme.textTertiary.opacity(0.5),
+                style: StrokeStyle(lineWidth: 2, dash: [12, 8])
             )
             .frame(width: size.width * 0.4, height: size.height * 0.75)
             .position(x: size.width / 2, y: size.height / 2)
