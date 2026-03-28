@@ -87,22 +87,15 @@ struct ReviewView: View {
                 Group {
                     if isSaving {
                         ProgressView()
-                            .tint(ProofTheme.background)
+                            .tint(.white)
                     } else if savedSuccessfully {
                         Text("Saved")
-                            .font(.system(size: 15, weight: .light))
-                            .foregroundStyle(ProofTheme.background)
                     } else {
                         Text("Save to Camera Roll")
-                            .font(.system(size: 15, weight: .light))
-                            .foregroundStyle(ProofTheme.background)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .background(savedSuccessfully ? ProofTheme.statusGood : ProofTheme.accent)
-                .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
             }
+            .buttonStyle(ProofTheme.ProofButtonStyle())
             .disabled(isSaving || savedSuccessfully)
 
             Button {

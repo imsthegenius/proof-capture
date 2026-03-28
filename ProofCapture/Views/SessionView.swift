@@ -166,25 +166,21 @@ struct SessionView: View {
 
     private var countdownOverlay: some View {
         ZStack {
-            ProofTheme.overlayPill
+            Color.black.opacity(0.5)
                 .ignoresSafeArea()
 
-            ZStack {
-                Circle()
-                    .fill(ProofTheme.overlayPill)
-                    .frame(width: 120, height: 120)
-
-                Text("\(countdownValue)")
-                    .font(.system(size: 88, weight: .thin))
-                    .foregroundStyle(ProofTheme.accent)
-                    .contentTransition(.numericText())
-            }
+            Text("\(countdownValue)")
+                .font(.system(size: 120, weight: .ultraLight))
+                .foregroundStyle(ProofTheme.accent)
+                .contentTransition(.numericText())
+                .scaleEffect(1.0)
+                .animation(.easeOut(duration: 0.3), value: countdownValue)
         }
     }
 
     private var capturingOverlay: some View {
         ZStack {
-            ProofTheme.overlayPill
+            Color.black.opacity(0.4)
                 .ignoresSafeArea()
 
             Text("Hold still")
@@ -250,13 +246,8 @@ struct SessionView: View {
                 Task { await beginCountdown() }
             } label: {
                 Text("Capture now")
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundStyle(ProofTheme.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(ProofTheme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
             }
+            .buttonStyle(ProofTheme.ProofSecondaryButtonStyle())
 
         case .countdown, .capturing:
             EmptyView()
@@ -267,25 +258,15 @@ struct SessionView: View {
                     Task { await retakeCurrentPose() }
                 } label: {
                     Text("Retake")
-                        .font(.system(size: 15, weight: .light))
-                        .foregroundStyle(ProofTheme.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(ProofTheme.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
                 }
+                .buttonStyle(ProofTheme.ProofSecondaryButtonStyle())
 
                 Button {
                     Task { await acceptAndAdvance() }
                 } label: {
                     Text(currentPose.next != nil ? "Next" : "Finish")
-                        .font(.system(size: 15, weight: .light))
-                        .foregroundStyle(ProofTheme.background)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(ProofTheme.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
                 }
+                .buttonStyle(ProofTheme.ProofButtonStyle())
             }
 
         case .complete:
@@ -294,13 +275,8 @@ struct SessionView: View {
                     Task { await saveAndFinish() }
                 } label: {
                     Text("Save to Camera Roll")
-                        .font(.system(size: 15, weight: .light))
-                        .foregroundStyle(ProofTheme.background)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(ProofTheme.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
                 }
+                .buttonStyle(ProofTheme.ProofButtonStyle())
 
                 Button {
                     dismiss()

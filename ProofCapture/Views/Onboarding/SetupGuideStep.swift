@@ -46,13 +46,8 @@ struct SetupGuideStep: View {
                 onNext()
             }) {
                 Text("Continue")
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundStyle(ProofTheme.background)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(ProofTheme.accent)
-                    .clipShape(.capsule)
             }
+            .buttonStyle(ProofTheme.ProofButtonStyle())
             .padding(.horizontal, ProofTheme.spacingXL)
             .padding(.bottom, ProofTheme.spacingXXL)
         }

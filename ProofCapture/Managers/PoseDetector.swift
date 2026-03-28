@@ -5,51 +5,23 @@ import UIKit
 @Observable
 final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
 
-    // MARK: - Existing Public Properties (preserved for compatibility)
+    // MARK: - Public State
 
     var bodyDetected = false
     var positionQuality: QualityLevel = .poor
-    var feedback = "Stand in front of the camera"
+    var feedback = "Step into the frame"
     var bodyRect: CGRect = .zero
 
-    // MARK: - New Public Properties
-
-    /// Set by SessionView before each pose to indicate which orientation we expect.
     var targetPose: Pose = .front
-
-    /// The orientation Vision actually detects from joint visibility.
     var detectedOrientation: Pose? = nil
-
-    /// True when detectedOrientation matches targetPose.
-    var poseMatchesExpected: Bool = false
-
-    /// True when position is good AND pose matches AND arms are relaxed.
-    var isReady: Bool = false
-
-    /// True when wrists are near hip level (arms hanging at sides).
-    var armsRelaxed: Bool = false
+    var poseMatchesExpected = false
+    var isReady = false
+    var armsRelaxed = false
 
     // MARK: - Private
 
     private var lastAnalysisTime: CFAbsoluteTime = 0
-    private let analysisInterval: CFAbsoluteTime = 0.1 // ~10fps throttle
-
-    /// Ideal body height ratio in frame (60-80% of frame height).
-    private let idealHeightMin: CGFloat = 0.50
-    private let idealHeightMax: CGFloat = 0.80
-
-    /// Acceptable horizontal center band.
-    private let centerBandMin: CGFloat = 0.35
-    private let centerBandMax: CGFloat = 0.65
-
-    /// Confidence threshold for a joint to be considered "visible".
-    private let jointConfidence: Float = 0.3
-
-    /// Confidence threshold for wrist/hip (lower because extremities are harder to detect).
-    private let extremityConfidence: Float = 0.2
-
-    /// Max vertical distance between wrist and hip (normalized) for arms to be "relaxed".
-    private let armsRelaxedThreshold: CGFloat = 0.15
+    private let analysisInterval: CFAbsoluteTime = 0.1 // ~10fps — sufficient for positioning guidance
 
     // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
 
@@ -70,252 +42,227 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         do {
             try handler.perform([request])
         } catch {
-            updateState(
-                detected: false,
-                quality: .poor,
-                feedback: "Stand in front of the camera",
-                rect: .zero,
-                orientation: nil,
-                poseMatch: false,
-                arms: false
-            )
+            publish(detected: false, quality: .poor, feedback: "Step into the frame",
+                    rect: .zero, orientation: nil, poseMatch: false, arms: false, ready: false)
             return
         }
 
         guard let observation = request.results?.first else {
-            updateState(
-                detected: false,
-                quality: .poor,
-                feedback: "Stand in front of the camera",
-                rect: .zero,
-                orientation: nil,
-                poseMatch: false,
-                arms: false
-            )
+            publish(detected: false, quality: .poor, feedback: "Step into the frame",
+                    rect: .zero, orientation: nil, poseMatch: false, arms: false, ready: false)
             return
         }
 
-        analyzeBodyPose(observation)
+        analyze(observation)
     }
 
-    // MARK: - Analysis
+    // MARK: - Analysis Pipeline
 
-    private func analyzeBodyPose(_ observation: VNHumanBodyPoseObservation) {
-        // Collect key joint positions
-        let jointNames: [VNHumanBodyPoseObservation.JointName] = [
-            .nose, .neck,
-            .leftShoulder, .rightShoulder,
-            .leftHip, .rightHip,
-            .leftAnkle, .rightAnkle
+    private func analyze(_ observation: VNHumanBodyPoseObservation) {
+        // 1. Collect visible joints for bounding box
+        let trackingJoints: [VNHumanBodyPoseObservation.JointName] = [
+            .nose, .neck, .leftShoulder, .rightShoulder,
+            .leftHip, .rightHip, .leftAnkle, .rightAnkle
         ]
 
         var points: [CGPoint] = []
-        for joint in jointNames {
-            if let point = try? observation.recognizedPoint(joint), point.confidence > 0.1 {
+        for joint in trackingJoints {
+            if let point = try? observation.recognizedPoint(joint), point.confidence > 0.3 {
                 points.append(point.location)
             }
         }
 
         guard points.count >= 3 else {
-            updateState(
-                detected: true,
-                quality: .poor,
-                feedback: "Can't see your full body -- step back",
-                rect: .zero,
-                orientation: nil,
-                poseMatch: false,
-                arms: false
-            )
+            publish(detected: true, quality: .poor, feedback: "Can't see your full body — step back",
+                    rect: .zero, orientation: nil, poseMatch: false, arms: false, ready: false)
             return
         }
 
-        // Calculate bounding box from detected joints
+        // 2. Bounding box (Vision coords: 0,0 = bottom-left)
         let xs = points.map(\.x)
         let ys = points.map(\.y)
-        let minX = xs.min()!
-        let maxX = xs.max()!
-        let minY = ys.min()!
-        let maxY = ys.max()!
+        let rect = CGRect(x: xs.min()!, y: ys.min()!,
+                          width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
 
-        let rect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
-        let centerX = rect.midX
-        let height = rect.height
+        // 3. Position assessment
+        let positionResult = assessPosition(rect: rect)
 
-        // -- Orientation detection --
+        // 4. Orientation detection
         let orientation = detectOrientation(from: observation)
 
-        // -- Arms check --
+        // 5. Pose match
+        let poseMatch = (orientation == targetPose)
+
+        // 6. Arms check
         let arms = checkArmsRelaxed(from: observation)
 
-        // -- Position evaluation --
+        // 7. Composite readiness
+        let ready = positionResult.quality == .good && poseMatch && arms
+
+        // 8. Build feedback string (priority order)
+        let feedbackText: String
+        if positionResult.quality == .poor {
+            feedbackText = positionResult.feedback
+        } else if !poseMatch, let orientation {
+            feedbackText = orientationFeedback(target: targetPose, detected: orientation)
+        } else if !arms {
+            feedbackText = "Relax your arms at your sides"
+        } else if positionResult.quality == .fair {
+            feedbackText = positionResult.feedback
+        } else if ready {
+            feedbackText = "Perfect — hold still"
+        } else {
+            feedbackText = "Adjusting..."
+        }
+
+        publish(detected: true, quality: positionResult.quality, feedback: feedbackText,
+                rect: rect, orientation: orientation, poseMatch: poseMatch, arms: arms, ready: ready)
+    }
+
+    // MARK: - Position Assessment
+
+    private struct PositionResult {
+        let quality: QualityLevel
+        let feedback: String
+    }
+
+    private func assessPosition(rect: CGRect) -> PositionResult {
+        let centerX = rect.midX
+        let bodyHeight = rect.height
         var issues: [String] = []
 
-        // Distance scoring with granular feedback
-        if height > 0.90 {
-            issues.append("Step back 3 feet")
-        } else if height > idealHeightMax {
-            issues.append("Step back 2 feet")
-        } else if height < 0.35 {
-            issues.append("Move 3 feet closer")
-        } else if height < idealHeightMin {
-            issues.append("Move 1 foot closer")
+        // Distance (body height in normalized coords)
+        if bodyHeight > 0.80 {
+            issues.append("Step back")
+        } else if bodyHeight < 0.35 {
+            issues.append("Move closer")
         }
 
-        // Centering
-        if centerX < centerBandMin {
-            issues.append("Move to center")
-        } else if centerX > centerBandMax {
-            issues.append("Move to center")
+        // Centering (Vision coords: 0.5 = center)
+        if centerX < 0.35 {
+            issues.append("Move right")
+        } else if centerX > 0.65 {
+            issues.append("Move left")
         }
 
-        // Pose mismatch feedback (only if position is otherwise OK)
-        let poseMatch = (orientation == targetPose)
-        if !poseMatch && orientation != nil && issues.isEmpty {
-            let orientationName = orientation?.title ?? "unknown"
-            issues.append("Turn to \(targetPose.title) (seeing \(orientationName))")
+        switch issues.count {
+        case 0:
+            return PositionResult(quality: .good, feedback: "Good position")
+        case 1:
+            return PositionResult(quality: .fair, feedback: issues[0])
+        default:
+            return PositionResult(quality: .poor, feedback: issues.joined(separator: " · "))
         }
-
-        // Arms feedback (only when pose and position are OK)
-        if !arms && issues.isEmpty && poseMatch {
-            issues.append("Relax arms at your sides")
-        }
-
-        // Determine overall quality and feedback
-        let quality: QualityLevel
-        let feedbackText: String
-
-        let positionGood = (height >= idealHeightMin && height <= idealHeightMax
-                            && centerX >= centerBandMin && centerX <= centerBandMax)
-
-        if positionGood && poseMatch && arms {
-            quality = .good
-            feedbackText = "Perfect -- hold still"
-        } else if positionGood && poseMatch {
-            quality = .fair
-            feedbackText = issues.isEmpty ? "Good position" : issues[0]
-        } else if positionGood {
-            quality = .fair
-            feedbackText = issues.isEmpty ? "Good position" : issues[0]
-        } else {
-            switch issues.count {
-            case 0:
-                quality = .good
-                feedbackText = "Perfect distance"
-            case 1:
-                quality = .fair
-                feedbackText = issues[0]
-            default:
-                quality = .poor
-                feedbackText = issues.joined(separator: " -- ")
-            }
-        }
-
-        updateState(
-            detected: true,
-            quality: quality,
-            feedback: feedbackText,
-            rect: rect,
-            orientation: orientation,
-            poseMatch: poseMatch,
-            arms: arms
-        )
     }
 
     // MARK: - Orientation Detection
 
-    /// Determines whether the user is facing front, side, or back based on joint visibility.
     private func detectOrientation(from observation: VNHumanBodyPoseObservation) -> Pose? {
         let nose = try? observation.recognizedPoint(.nose)
+        let leftEar = try? observation.recognizedPoint(.leftEar)
+        let rightEar = try? observation.recognizedPoint(.rightEar)
         let leftShoulder = try? observation.recognizedPoint(.leftShoulder)
         let rightShoulder = try? observation.recognizedPoint(.rightShoulder)
-        let leftHip = try? observation.recognizedPoint(.leftHip)
-        let rightHip = try? observation.recognizedPoint(.rightHip)
-        let leftEye = try? observation.recognizedPoint(.leftEye)
-        let rightEye = try? observation.recognizedPoint(.rightEye)
 
-        let noseVisible = (nose?.confidence ?? 0) > jointConfidence
-        let leftShoulderVisible = (leftShoulder?.confidence ?? 0) > jointConfidence
-        let rightShoulderVisible = (rightShoulder?.confidence ?? 0) > jointConfidence
-        let leftHipVisible = (leftHip?.confidence ?? 0) > jointConfidence
-        let rightHipVisible = (rightHip?.confidence ?? 0) > jointConfidence
-        let leftEyeVisible = (leftEye?.confidence ?? 0) > jointConfidence
-        let rightEyeVisible = (rightEye?.confidence ?? 0) > jointConfidence
+        let noseConf = nose?.confidence ?? 0
+        let leftEarConf = leftEar?.confidence ?? 0
+        let rightEarConf = rightEar?.confidence ?? 0
+        let leftShoulderConf = leftShoulder?.confidence ?? 0
+        let rightShoulderConf = rightShoulder?.confidence ?? 0
 
-        // Front: nose + both shoulders visible with reasonable symmetry
-        if noseVisible && leftShoulderVisible && rightShoulderVisible {
-            if let n = nose, let ls = leftShoulder, let rs = rightShoulder,
-               n.confidence > jointConfidence,
-               ls.confidence > jointConfidence,
-               rs.confidence > jointConfidence {
-                let leftDist = abs(n.location.x - ls.location.x)
-                let rightDist = abs(n.location.x - rs.location.x)
-                let maxDist = max(leftDist, rightDist)
-                if maxDist > 0 {
-                    let symmetryRatio = min(leftDist, rightDist) / maxDist
-                    if symmetryRatio > 0.5 {
-                        return .front
-                    }
-                    // Asymmetric shoulders with nose visible = turning to side
-                    return .side
-                }
-            }
-            return .front
-        }
+        // Shoulder width (normalized x-distance)
+        let shoulderWidth: CGFloat = {
+            guard leftShoulderConf > 0.3, rightShoulderConf > 0.3,
+                  let ls = leftShoulder, let rs = rightShoulder else { return 0 }
+            return abs(ls.location.x - rs.location.x)
+        }()
 
-        // Back: no nose and no eyes visible, but shoulders or hips visible
-        let faceVisible = noseVisible || leftEyeVisible || rightEyeVisible
-        let bodyVisible = (leftShoulderVisible || rightShoulderVisible)
-                        && (leftHipVisible || rightHipVisible)
-        if !faceVisible && bodyVisible {
+        // BACK: nose not visible at all
+        if noseConf < 0.1 {
             return .back
         }
 
-        // Side: only one shoulder visible (other occluded by torso)
-        if leftShoulderVisible != rightShoulderVisible {
+        // SIDE: ear asymmetry + compressed shoulder width
+        let earAsymmetry = abs(leftEarConf - rightEarConf)
+        if earAsymmetry > 0.3 && shoulderWidth < 0.15 {
             return .side
         }
 
-        // Nose visible but shoulders not clearly seen = ambiguous, lean toward side
-        if noseVisible && !leftShoulderVisible && !rightShoulderVisible {
+        // Also SIDE: only one shoulder visible with confidence
+        if (leftShoulderConf > 0.3) != (rightShoulderConf > 0.3) {
             return .side
+        }
+
+        // FRONT: nose visible + shoulders spread
+        if noseConf > 0.3 && shoulderWidth > 0.12 {
+            return .front
         }
 
         return nil
     }
 
-    // MARK: - Arms-at-Sides Check
+    private func orientationFeedback(target: Pose, detected: Pose) -> String {
+        switch (target, detected) {
+        case (.front, .side): "Turn to face the camera"
+        case (.front, .back): "Turn around to face the camera"
+        case (.side, .front): "Turn to your left side"
+        case (.side, .back): "Turn a bit more to show your profile"
+        case (.back, .front): "Turn away from the camera"
+        case (.back, .side): "Turn a bit more, face the wall"
+        default: "Adjust your position"
+        }
+    }
 
-    /// Returns true when wrists are near hip level, indicating arms are relaxed at sides.
-    /// If wrists can't be detected (common in back pose), returns true by default.
+    // MARK: - Arms Relaxed Check
+
     private func checkArmsRelaxed(from observation: VNHumanBodyPoseObservation) -> Bool {
         guard let leftWrist = try? observation.recognizedPoint(.leftWrist),
               let rightWrist = try? observation.recognizedPoint(.rightWrist),
               let leftHip = try? observation.recognizedPoint(.leftHip),
               let rightHip = try? observation.recognizedPoint(.rightHip),
-              leftWrist.confidence > extremityConfidence,
-              rightWrist.confidence > extremityConfidence,
-              leftHip.confidence > extremityConfidence,
-              rightHip.confidence > extremityConfidence else {
-            // Can't see wrists = probably fine (back pose or occluded)
+              leftWrist.confidence > 0.3, rightWrist.confidence > 0.3,
+              leftHip.confidence > 0.3, rightHip.confidence > 0.3 else {
+            // Can't see wrists = probably back pose, assume OK
             return true
         }
 
-        // Wrists should be near hip level (within threshold of body height)
-        let leftOK = abs(leftWrist.location.y - leftHip.location.y) < armsRelaxedThreshold
-        let rightOK = abs(rightWrist.location.y - rightHip.location.y) < armsRelaxedThreshold
-        return leftOK && rightOK
+        // Wrist near hip height (Y within 8% of frame)
+        let leftYOK = abs(leftWrist.location.y - leftHip.location.y) < 0.08
+        let rightYOK = abs(rightWrist.location.y - rightHip.location.y) < 0.08
+
+        // Wrist horizontally near hip (X within 6% of frame)
+        let leftXOK = abs(leftWrist.location.x - leftHip.location.x) < 0.06
+        let rightXOK = abs(rightWrist.location.x - rightHip.location.x) < 0.06
+
+        // Elbow angle check — arms at sides should be ~160-180 degrees
+        if let leftElbow = try? observation.recognizedPoint(.leftElbow),
+           let leftShoulder = try? observation.recognizedPoint(.leftShoulder),
+           leftElbow.confidence > 0.3, leftShoulder.confidence > 0.3 {
+            let angle = angleBetween(
+                p1: leftShoulder.location, vertex: leftElbow.location, p2: leftWrist.location
+            )
+            if angle < 150 { return false }
+        }
+
+        return leftYOK && rightYOK && leftXOK && rightXOK
     }
 
-    // MARK: - State Update
+    private func angleBetween(p1: CGPoint, vertex: CGPoint, p2: CGPoint) -> CGFloat {
+        let v1 = CGPoint(x: p1.x - vertex.x, y: p1.y - vertex.y)
+        let v2 = CGPoint(x: p2.x - vertex.x, y: p2.y - vertex.y)
+        let dot = v1.x * v2.x + v1.y * v2.y
+        let mag1 = sqrt(v1.x * v1.x + v1.y * v1.y)
+        let mag2 = sqrt(v2.x * v2.x + v2.y * v2.y)
+        guard mag1 > 0, mag2 > 0 else { return 180 }
+        let cosAngle = dot / (mag1 * mag2)
+        return acos(min(max(cosAngle, -1), 1)) * 180 / .pi
+    }
 
-    private func updateState(
-        detected: Bool,
-        quality: QualityLevel,
-        feedback: String,
-        rect: CGRect,
-        orientation: Pose?,
-        poseMatch: Bool,
-        arms: Bool
+    // MARK: - State Publishing
+
+    private func publish(
+        detected: Bool, quality: QualityLevel, feedback: String, rect: CGRect,
+        orientation: Pose?, poseMatch: Bool, arms: Bool, ready: Bool
     ) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -326,7 +273,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
             self.detectedOrientation = orientation
             self.poseMatchesExpected = poseMatch
             self.armsRelaxed = arms
-            self.isReady = (quality == .good && poseMatch && arms)
+            self.isReady = ready
         }
     }
 }

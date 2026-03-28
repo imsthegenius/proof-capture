@@ -27,8 +27,7 @@ struct CaptureView: View {
                             .font(.system(size: 15, weight: .light))
                             .foregroundStyle(.white)
                             .frame(width: 44, height: 44)
-                            .background(ProofTheme.overlayPill)
-                            .clipShape(Circle())
+                            .glassEffect(.regular, in: .circle)
                     }
                     .accessibilityLabel("Switch camera")
 
@@ -41,8 +40,7 @@ struct CaptureView: View {
                                 .font(.system(size: 15, weight: .light))
                                 .foregroundStyle(.white)
                                 .frame(width: 44, height: 44)
-                                .background(ProofTheme.overlayPill)
-                                .clipShape(Circle())
+                                .glassEffect(.regular, in: .circle)
                         }
                         .accessibilityLabel(cameraManager.isTorchOn ? "Turn off torch" : "Turn on torch")
                     }
@@ -57,15 +55,14 @@ struct CaptureView: View {
                     .padding(.horizontal, ProofTheme.spacingMD)
                     .padding(.bottom, ProofTheme.spacingSM)
 
-                // Instruction on dark pill
+                // Instruction on glass pill
                 Text(currentPose.instruction)
                     .font(.system(size: 15, weight: .light))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, ProofTheme.spacingMD)
                     .padding(.vertical, ProofTheme.spacingSM)
-                    .background(ProofTheme.overlayPill)
-                    .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
+                    .glassEffect(.regular, in: .capsule)
                     .padding(.horizontal, ProofTheme.spacingLG)
                     .padding(.bottom, ProofTheme.spacingMD)
             }
@@ -88,8 +85,7 @@ struct CaptureView: View {
         }
         .padding(.horizontal, ProofTheme.spacingMD)
         .padding(.vertical, ProofTheme.spacingSM)
-        .background(ProofTheme.overlayPill)
-        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
+        .glassEffect(.regular, in: .capsule)
     }
 
     private func statusIndicator(quality: QualityLevel, label: String) -> some View {
