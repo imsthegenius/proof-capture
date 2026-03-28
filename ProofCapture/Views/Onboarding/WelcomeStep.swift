@@ -23,7 +23,7 @@ struct WelcomeStep: View {
 
             Text("Three poses. Timed capture.\nSame framing every session.")
                 .font(.system(size: 15, weight: .light))
-                .foregroundStyle(ProofTheme.textTertiary)
+                .foregroundStyle(ProofTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
 

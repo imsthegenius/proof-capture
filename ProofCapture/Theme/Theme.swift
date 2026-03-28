@@ -10,9 +10,9 @@ enum ProofTheme {
 
     static let textPrimary = Color(red: 245/255, green: 242/255, blue: 237/255)   // #F5F2ED
     static let textSecondary = Color(red: 142/255, green: 138/255, blue: 130/255) // #8E8A82
-    static let textTertiary = Color(red: 82/255, green: 78/255, blue: 72/255)     // #524E48
+    static let textTertiary = Color(red: 105/255, green: 100/255, blue: 94/255)   // #69645E
 
-    static let accent = Color(red: 235/255, green: 235/255, blue: 230/255)        // #EBEBE6 (warm white)
+    static let accent = Color(red: 250/255, green: 250/255, blue: 252/255)        // #FAFAFC (cool white)
 
     // Camera overlays — need high contrast on camera feed
     static let overlayPill = Color.black.opacity(0.65)
@@ -20,7 +20,7 @@ enum ProofTheme {
 
     // Status indicators
     static let statusGood = Color(red: 106/255, green: 190/255, blue: 110/255)    // #6ABE6E
-    static let statusFair = Color(red: 230/255, green: 180/255, blue: 80/255)     // #E6B450
+    static let statusFair = Color(red: 220/255, green: 190/255, blue: 140/255)    // #DCBE8C
     static let statusPoor = Color(red: 210/255, green: 90/255, blue: 85/255)      // #D25A55
 
     // MARK: - Spacing (4pt grid)

@@ -30,7 +30,7 @@ struct HomeView: View {
 
             Spacer()
 
-            // Last session info
+            // Last session info OR first-time guidance
             if let last = lastSession {
                 Text("Last session")
                     .font(.system(size: 13, weight: .light))
@@ -39,6 +39,15 @@ struct HomeView: View {
                     .font(.system(size: 15, weight: .light))
                     .foregroundStyle(ProofTheme.textSecondary)
                     .padding(.top, ProofTheme.spacingXS)
+            } else {
+                VStack(spacing: ProofTheme.spacingSM) {
+                    Text("Prop your phone up")
+                        .font(.system(size: 17, weight: .light))
+                        .foregroundStyle(ProofTheme.textSecondary)
+                    Text("5\u{2013}6 feet away, waist height")
+                        .font(.system(size: 13, weight: .light))
+                        .foregroundStyle(ProofTheme.textTertiary)
+                }
             }
 
             Spacer()

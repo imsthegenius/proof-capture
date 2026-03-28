@@ -21,6 +21,15 @@ struct AuthView: View {
 
             Spacer()
 
+            VStack(spacing: ProofTheme.spacingLG) {
+                featureRow(icon: "camera.viewfinder", text: "Guided front, side, back poses")
+                featureRow(icon: "waveform", text: "Voice coaching — hands-free capture")
+                featureRow(icon: "icloud.and.arrow.up", text: "Private cloud backup")
+            }
+            .padding(.horizontal, ProofTheme.spacingXL)
+
+            Spacer()
+
             SignInWithAppleButton(.signIn) { request in
                 authManager.prepareRequest(request)
             } onCompletion: { result in
@@ -41,5 +50,18 @@ struct AuthView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(ProofTheme.background)
+    }
+
+    private func featureRow(icon: String, text: String) -> some View {
+        HStack(spacing: ProofTheme.spacingMD) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .light))
+                .foregroundStyle(ProofTheme.textTertiary)
+                .frame(width: 28)
+            Text(text)
+                .font(.system(size: 15, weight: .light))
+                .foregroundStyle(ProofTheme.textSecondary)
+            Spacer()
+        }
     }
 }
