@@ -22,6 +22,8 @@ struct SessionView: View {
     @State private var showAbortConfirmation = false
     @State private var retakePose: Pose?
     @State private var isRetaking = false
+    @State private var checkmarkProgress: CGFloat = 0
+    @State private var photoScale: CGFloat = 1.03
 
     @State private var cameraManager = CameraManager()
     @State private var poseDetector = PoseDetector()
@@ -167,9 +169,13 @@ struct SessionView: View {
                 Text("\(countdownValue)")
                     .font(.system(size: 120, weight: .ultraLight))
                     .foregroundStyle(ProofTheme.accent)
-                    .contentTransition(.numericText())
-                    .animation(.easeOut(duration: 0.3), value: countdownValue)
+                    .id(countdownValue)
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 1.1).combined(with: .opacity),
+                        removal: .scale(scale: 0.9).combined(with: .opacity)
+                    ))
             }
+            .animation(.easeOut(duration: 0.3), value: countdownValue)
         }
     }
 
@@ -196,16 +202,23 @@ struct SessionView: View {
                     .aspectRatio(contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
                     .padding(.horizontal, ProofTheme.spacingMD)
+                    .scaleEffect(photoScale)
                     .accessibilityLabel("\(currentPose.title) photo captured")
             }
 
-            // Green checkmark overlay
+            // Self-drawing green checkmark overlay
             VStack {
                 Spacer()
 
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 48, weight: .light))
-                    .foregroundStyle(ProofTheme.statusGood)
+                Circle()
+                    .fill(ProofTheme.statusGood.opacity(0.15))
+                    .frame(width: 64, height: 64)
+                    .overlay(
+                        CheckmarkShape()
+                            .trim(from: 0, to: checkmarkProgress)
+                            .stroke(ProofTheme.statusGood, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                            .frame(width: 32, height: 32)
+                    )
 
                 Spacer()
                     .frame(height: ProofTheme.spacingXL)
@@ -213,6 +226,12 @@ struct SessionView: View {
         }
         .transition(.opacity)
         .task {
+            withAnimation(.easeOut(duration: 0.4)) {
+                checkmarkProgress = 1.0
+            }
+            withAnimation(.easeOut(duration: 0.3)) {
+                photoScale = 1.0
+            }
             await autoAdvanceAfterPreview()
         }
     }
@@ -225,7 +244,7 @@ struct SessionView: View {
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(ProofTheme.textPrimary)
 
-            HStack(spacing: ProofTheme.spacingSM) {
+            HStack(spacing: ProofTheme.spacingMD) {
                 ForEach(Pose.allCases) { pose in
                     VStack(spacing: ProofTheme.spacingSM) {
                         if let image = capturedImages[pose] {
@@ -360,6 +379,7 @@ struct SessionView: View {
             if poseDetector.isReady && lightingAnalyzer.quality != .poor {
                 readyDuration += checkInterval
                 if readyDuration >= requiredDuration {
+                    try? await Task.sleep(for: .milliseconds(300))
                     await audioGuide.speakAutoReady()
                     await beginCountdown()
                     return
@@ -416,6 +436,8 @@ struct SessionView: View {
         }
 
         ProofTheme.hapticSuccess()
+        checkmarkProgress = 0
+        photoScale = 1.03
         phase = .preview
     }
 
@@ -460,6 +482,20 @@ struct SessionView: View {
         try? modelContext.save()
         Task { await syncManager.syncPendingSessions() }
         dismiss()
+    }
+}
+
+// MARK: - Checkmark Shape
+
+private struct CheckmarkShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+        path.move(to: CGPoint(x: w * 0.2, y: h * 0.5))
+        path.addLine(to: CGPoint(x: w * 0.4, y: h * 0.7))
+        path.addLine(to: CGPoint(x: w * 0.8, y: h * 0.3))
+        return path
     }
 }
 

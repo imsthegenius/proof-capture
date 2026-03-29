@@ -126,7 +126,7 @@ struct ReviewView: View {
                     Group {
                         if isSaving {
                             ProgressView()
-                                .tint(.white)
+                                .tint(ProofTheme.overlayText)
                         } else if savedSuccessfully {
                             Text("Saved")
                         } else {

@@ -8,6 +8,7 @@ struct HistoryView: View {
     @State private var showDeleteConfirmation = false
     @State private var isCompareMode = false
     @State private var compareSelections: [PhotoSession] = []
+    @State private var visibleRows: Set<UUID> = []
 
     var body: some View {
         Group {
@@ -144,6 +145,16 @@ struct HistoryView: View {
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 0, leading: ProofTheme.spacingMD, bottom: 0, trailing: ProofTheme.spacingMD))
                         .listRowSeparator(.hidden)
+                        .opacity(visibleRows.contains(session.id) ? 1 : 0)
+                        .offset(y: visibleRows.contains(session.id) ? 0 : 12)
+                        .animation(.easeOut(duration: 0.25), value: visibleRows.contains(session.id))
+                        .onAppear {
+                            let index = sessions.firstIndex(where: { $0.id == session.id }) ?? 0
+                            let delay = min(Double(index) * 0.05, 0.25)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                                visibleRows.insert(session.id)
+                            }
+                        }
                     } else {
                         NavigationLink(destination: ReviewView(session: session)) {
                             sessionRow(session)
@@ -152,6 +163,16 @@ struct HistoryView: View {
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 0, leading: ProofTheme.spacingMD, bottom: 0, trailing: ProofTheme.spacingMD))
                         .listRowSeparator(.hidden)
+                        .opacity(visibleRows.contains(session.id) ? 1 : 0)
+                        .offset(y: visibleRows.contains(session.id) ? 0 : 12)
+                        .animation(.easeOut(duration: 0.25), value: visibleRows.contains(session.id))
+                        .onAppear {
+                            let index = sessions.firstIndex(where: { $0.id == session.id }) ?? 0
+                            let delay = min(Double(index) * 0.05, 0.25)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                                visibleRows.insert(session.id)
+                            }
+                        }
                     }
                 }
                 .onDelete { indexSet in

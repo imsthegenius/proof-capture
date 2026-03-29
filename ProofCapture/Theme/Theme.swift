@@ -70,7 +70,9 @@ enum ProofTheme {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .modifier(PrimaryButtonBackground())
-                .opacity(configuration.isPressed ? 0.8 : 1.0)
+                .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+                .opacity(configuration.isPressed ? 0.85 : 1.0)
+                .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
         }
     }
 
@@ -82,7 +84,9 @@ enum ProofTheme {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .modifier(SecondaryButtonBackground())
-                .opacity(configuration.isPressed ? 0.8 : 1.0)
+                .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+                .opacity(configuration.isPressed ? 0.85 : 1.0)
+                .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
         }
     }
 

@@ -75,6 +75,12 @@ struct CaptureView: View {
                     .tracking(4)
                     .foregroundStyle(ProofTheme.overlayText.opacity(0.4))
                     .padding(.bottom, ProofTheme.spacingXL)
+                    .id(currentPose)
+                    .transition(.asymmetric(
+                        insertion: .offset(y: 8).combined(with: .opacity),
+                        removal: .offset(y: -8).combined(with: .opacity)
+                    ))
+                    .animation(.easeOut(duration: 0.3), value: currentPose)
             }
 
             // Camera flip button — top right
@@ -121,7 +127,7 @@ struct CaptureView: View {
 
     private func startAmberPulse() {
         withAnimation(
-            .easeInOut(duration: 1.2)
+            .timingCurve(0.37, 0.0, 0.63, 1.0, duration: 1.2)
             .repeatForever(autoreverses: true)
         ) {
             amberPulseActive = true
