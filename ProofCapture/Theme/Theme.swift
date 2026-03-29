@@ -9,10 +9,10 @@ enum ProofTheme {
     static let separator = Color(red: 28/255, green: 27/255, blue: 25/255)        // #1C1B19
 
     static let textPrimary = Color(red: 245/255, green: 242/255, blue: 237/255)   // #F5F2ED
-    static let textSecondary = Color(red: 142/255, green: 138/255, blue: 130/255) // #8E8A82
-    static let textTertiary = Color(red: 105/255, green: 100/255, blue: 94/255)   // #69645E
+    static let textSecondary = Color(red: 168/255, green: 163/255, blue: 155/255) // #A8A39B
+    static let textTertiary = Color(red: 130/255, green: 125/255, blue: 118/255)  // #827D76
 
-    static let accent = Color(red: 250/255, green: 250/255, blue: 252/255)        // #FAFAFC (cool white)
+    static let accent = Color(red: 235/255, green: 235/255, blue: 230/255)        // #EBEBE6 (warm white)
 
     // Camera overlays — need high contrast on camera feed
     // Glass effects available on iOS 26+, use overlayPill as fallback
@@ -23,6 +23,16 @@ enum ProofTheme {
     static let statusGood = Color(red: 106/255, green: 190/255, blue: 110/255)    // #6ABE6E
     static let statusFair = Color(red: 220/255, green: 190/255, blue: 140/255)    // #DCBE8C
     static let statusPoor = Color(red: 210/255, green: 90/255, blue: 85/255)      // #D25A55
+
+    // MARK: - Border Glow (banking KYC-style readiness indicator)
+    // Full-screen edge glow visible from 2 meters — replaces small status ring
+    static let borderNeutral = Color.white.opacity(0.3)                            // Body detected, adjusting
+    static let borderAlmost = Color(red: 220/255, green: 190/255, blue: 140/255)  // 1-2 checks failing
+    static let borderReady = Color(red: 106/255, green: 190/255, blue: 110/255)   // All checks pass → capture
+
+    static let borderWidthNeutral: CGFloat = 2
+    static let borderWidthAlmost: CGFloat = 3
+    static let borderWidthReady: CGFloat = 4
 
     // MARK: - Spacing (4pt grid)
     static let spacingXS: CGFloat = 4

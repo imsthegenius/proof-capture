@@ -2,31 +2,20 @@ import SwiftUI
 
 struct PoseGuideOverlay: View {
     let poseDetector: PoseDetector
+    let overallStatus: QualityLevel
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                // Target zone — dashed outline showing where to stand
-                targetSilhouette(in: geometry.size)
-
-                if poseDetector.bodyDetected {
-                    bodyOutline(in: geometry.size)
-                }
+            if poseDetector.bodyDetected {
+                bodyOutline(in: geometry.size)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func targetSilhouette(in size: CGSize) -> some View {
-        RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-            .stroke(
-                ProofTheme.textTertiary.opacity(0.5),
-                style: StrokeStyle(lineWidth: 2, dash: [12, 8])
-            )
-            .frame(width: size.width * 0.4, height: size.height * 0.75)
-            .position(x: size.width / 2, y: size.height / 2)
-    }
+    // MARK: - Body Outline
 
+    /// Thin rounded rect around the detected body, colored to match the border glow state.
     private func bodyOutline(in size: CGSize) -> some View {
         let rect = normalizedToView(poseDetector.bodyRect, in: size)
 
@@ -34,15 +23,19 @@ struct PoseGuideOverlay: View {
             .stroke(outlineColor, lineWidth: 2)
             .frame(width: rect.width, height: rect.height)
             .position(x: rect.midX, y: rect.midY)
+            .animation(.easeInOut(duration: 0.3), value: overallStatus)
     }
 
+    /// Colors the outline to match the border glow — unified visual language.
     private var outlineColor: Color {
-        switch poseDetector.positionQuality {
-        case .good: ProofTheme.statusGood
-        case .fair: ProofTheme.statusFair
-        case .poor: ProofTheme.statusPoor
+        switch overallStatus {
+        case .good: ProofTheme.borderReady
+        case .fair: ProofTheme.borderAlmost
+        case .poor: ProofTheme.borderNeutral
         }
     }
+
+    // MARK: - Coordinate Conversion
 
     private func normalizedToView(_ normalized: CGRect, in size: CGSize) -> CGRect {
         CGRect(

@@ -3,11 +3,10 @@ import AVFoundation
 import SwiftData
 
 private enum SessionPhase {
-    case preparing
     case positioning
     case countdown
     case capturing
-    case reviewing
+    case preview    // 2-second auto-advance showing captured photo
     case complete
 }
 
@@ -17,10 +16,11 @@ struct SessionView: View {
     @Environment(SyncManager.self) private var syncManager
 
     @State private var currentPose: Pose = .front
-    @State private var phase: SessionPhase = .preparing
+    @State private var phase: SessionPhase = .positioning
     @State private var capturedImages: [Pose: UIImage] = [:]
     @State private var countdownValue: Int = 5
     @State private var showAbortConfirmation = false
+    @State private var retakePose: Pose?
 
     @State private var cameraManager = CameraManager()
     @State private var poseDetector = PoseDetector()
@@ -121,9 +121,6 @@ struct SessionView: View {
     @ViewBuilder
     private var mainContent: some View {
         switch phase {
-        case .preparing:
-            preparingView
-
         case .positioning, .countdown, .capturing:
             ZStack {
                 CaptureView(
@@ -145,38 +142,37 @@ struct SessionView: View {
                 await monitorReadiness()
             }
 
-        case .reviewing:
-            reviewingView
+        case .preview:
+            previewView
 
         case .complete:
             completeView
         }
     }
 
-    private var preparingView: some View {
-        VStack(spacing: ProofTheme.spacingMD) {
-            Text("Setting up camera")
-                .font(.system(size: 20, weight: .light))
-                .foregroundStyle(ProofTheme.textPrimary)
-
-            ProgressView()
-                .tint(ProofTheme.textSecondary)
-        }
-    }
+    // MARK: - Countdown Overlay
 
     private var countdownOverlay: some View {
         ZStack {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
 
-            Text("\(countdownValue)")
-                .font(.system(size: 120, weight: .ultraLight))
-                .foregroundStyle(ProofTheme.accent)
-                .contentTransition(.numericText())
-                .scaleEffect(1.0)
-                .animation(.easeOut(duration: 0.3), value: countdownValue)
+            VStack(spacing: ProofTheme.spacingMD) {
+                Text(currentPose.title.uppercased())
+                    .font(.system(size: 15, weight: .light))
+                    .tracking(4)
+                    .foregroundStyle(ProofTheme.overlayText.opacity(0.6))
+
+                Text("\(countdownValue)")
+                    .font(.system(size: 120, weight: .ultraLight))
+                    .foregroundStyle(ProofTheme.accent)
+                    .contentTransition(.numericText())
+                    .animation(.easeOut(duration: 0.3), value: countdownValue)
+            }
         }
     }
+
+    // MARK: - Capturing Overlay
 
     private var capturingOverlay: some View {
         ZStack {
@@ -185,22 +181,42 @@ struct SessionView: View {
 
             Text("Hold still")
                 .font(.system(size: 20, weight: .light))
-                .foregroundStyle(.white)
+                .foregroundStyle(ProofTheme.overlayText)
         }
     }
 
-    private var reviewingView: some View {
-        VStack(spacing: ProofTheme.spacingMD) {
+    // MARK: - Preview (2-second auto-advance)
+
+    private var previewView: some View {
+        ZStack {
             if let image = capturedImages[currentPose] {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
                     .padding(.horizontal, ProofTheme.spacingMD)
-                    .accessibilityLabel("\(currentPose.title) photo preview")
+                    .accessibilityLabel("\(currentPose.title) photo captured")
+            }
+
+            // Green checkmark overlay
+            VStack {
+                Spacer()
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(ProofTheme.statusGood)
+
+                Spacer()
+                    .frame(height: ProofTheme.spacingXL)
             }
         }
+        .transition(.opacity)
+        .task {
+            await autoAdvanceAfterPreview()
+        }
     }
+
+    // MARK: - Complete View
 
     private var completeView: some View {
         VStack(spacing: ProofTheme.spacingLG) {
@@ -208,20 +224,40 @@ struct SessionView: View {
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(ProofTheme.textPrimary)
 
-            HStack(spacing: ProofTheme.spacingMD) {
+            HStack(spacing: ProofTheme.spacingSM) {
                 ForEach(Pose.allCases) { pose in
                     VStack(spacing: ProofTheme.spacingSM) {
                         if let image = capturedImages[pose] {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 100, height: 140)
-                                .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-                                .accessibilityLabel("\(pose.title) photo")
+                            Button {
+                                retakePose = pose
+                            } label: {
+                                ZStack(alignment: .bottom) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 200)
+                                        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
+
+                                    // Subtle retake hint
+                                    Text("Tap to retake")
+                                        .font(.system(size: 11, weight: .light))
+                                        .foregroundStyle(ProofTheme.overlayText.opacity(0.6))
+                                        .padding(.vertical, ProofTheme.spacingXS)
+                                        .frame(maxWidth: .infinity)
+                                        .background(.black.opacity(0.4))
+                                        .clipShape(UnevenRoundedRectangle(
+                                            bottomLeadingRadius: ProofTheme.radiusMD,
+                                            bottomTrailingRadius: ProofTheme.radiusMD
+                                        ))
+                                }
+                            }
+                            .accessibilityLabel("Retake \(pose.title) photo")
                         } else {
                             RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
                                 .fill(ProofTheme.surface)
-                                .frame(width: 100, height: 140)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 200)
                         }
 
                         Text(pose.title)
@@ -230,7 +266,30 @@ struct SessionView: View {
                     }
                 }
             }
+            .padding(.horizontal, ProofTheme.spacingMD)
         }
+        .alert("Retake \(retakePose?.title ?? "") photo?", isPresented: Binding(
+            get: { retakePose != nil },
+            set: { if !$0 { retakePose = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { retakePose = nil }
+            Button("Retake") {
+                if let pose = retakePose {
+                    Task { await retakeFromComplete(pose) }
+                }
+            }
+        } message: {
+            Text("The camera will reopen for this pose only.")
+        }
+    }
+
+    private func retakeFromComplete(_ pose: Pose) async {
+        capturedImages[pose] = nil
+        currentPose = pose
+        poseDetector.targetPose = pose
+        cameraManager.startSession()
+        phase = .positioning
+        await audioGuide.speak(pose.audioPrompt)
     }
 
     // MARK: - Bottom Controls
@@ -238,36 +297,19 @@ struct SessionView: View {
     @ViewBuilder
     private var bottomControls: some View {
         switch phase {
-        case .preparing:
-            EmptyView()
-
         case .positioning:
+            // Subtle manual capture fallback
             Button {
                 Task { await beginCountdown() }
             } label: {
-                Text("Capture now")
+                Text("capture")
+                    .font(.system(size: 13, weight: .light))
+                    .foregroundStyle(ProofTheme.textTertiary)
             }
-            .buttonStyle(ProofTheme.ProofSecondaryButtonStyle())
+            .accessibilityLabel("Manual capture")
 
-        case .countdown, .capturing:
+        case .countdown, .capturing, .preview:
             EmptyView()
-
-        case .reviewing:
-            HStack(spacing: ProofTheme.spacingMD) {
-                Button {
-                    Task { await retakeCurrentPose() }
-                } label: {
-                    Text("Retake")
-                }
-                .buttonStyle(ProofTheme.ProofSecondaryButtonStyle())
-
-                Button {
-                    Task { await acceptAndAdvance() }
-                } label: {
-                    Text(currentPose.next != nil ? "Next" : "Finish")
-                }
-                .buttonStyle(ProofTheme.ProofButtonStyle())
-            }
 
         case .complete:
             VStack(spacing: ProofTheme.spacingSM) {
@@ -298,9 +340,8 @@ struct SessionView: View {
         cameraManager.configure()
         cameraManager.startSession()
 
-        try? await Task.sleep(for: .milliseconds(500))
+        // Go straight to positioning — no preparing delay
         phase = .positioning
-
         await audioGuide.speak(currentPose.audioPrompt)
     }
 
@@ -311,7 +352,7 @@ struct SessionView: View {
         var timeSinceLastGuidance: TimeInterval = 0
         let checkInterval: TimeInterval = 0.25
         let requiredDuration: TimeInterval = 1.5
-        let guidanceInterval: TimeInterval = 4.0 // Don't nag more than every 4s
+        let guidanceInterval: TimeInterval = 4.0
 
         while !Task.isCancelled && phase == .positioning {
             if poseDetector.isReady && lightingAnalyzer.quality != .poor {
@@ -324,7 +365,6 @@ struct SessionView: View {
             } else {
                 readyDuration = 0
 
-                // Speak position guidance periodically when not ready
                 timeSinceLastGuidance += checkInterval
                 if timeSinceLastGuidance >= guidanceInterval {
                     timeSinceLastGuidance = 0
@@ -342,7 +382,10 @@ struct SessionView: View {
         }
     }
 
+    // MARK: - Countdown
+
     private func beginCountdown() async {
+        guard phase == .positioning else { return }
         phase = .countdown
         let seconds = UserDefaults.standard.integer(forKey: "countdownSeconds")
         let countdownDuration = seconds > 0 ? seconds : 5
@@ -358,6 +401,8 @@ struct SessionView: View {
         await captureCurrentPose()
     }
 
+    // MARK: - Capture
+
     private func captureCurrentPose() async {
         phase = .capturing
 
@@ -369,16 +414,15 @@ struct SessionView: View {
         }
 
         ProofTheme.hapticSuccess()
-        phase = .reviewing
+        phase = .preview
     }
 
-    private func retakeCurrentPose() async {
-        capturedImages[currentPose] = nil
-        phase = .positioning
-        await audioGuide.speak(currentPose.audioPrompt)
-    }
+    // MARK: - Preview Auto-Advance
 
-    private func acceptAndAdvance() async {
+    private func autoAdvanceAfterPreview() async {
+        try? await Task.sleep(for: .seconds(2))
+        guard phase == .preview else { return }
+
         if let next = currentPose.next {
             currentPose = next
             poseDetector.targetPose = next
@@ -389,6 +433,8 @@ struct SessionView: View {
             phase = .complete
         }
     }
+
+    // MARK: - Save
 
     private func saveAndFinish() async {
         let session = PhotoSession()

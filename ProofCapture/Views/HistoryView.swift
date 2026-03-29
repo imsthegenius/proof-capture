@@ -4,6 +4,10 @@ import SwiftData
 struct HistoryView: View {
     @Query(sort: \PhotoSession.date, order: .reverse) private var sessions: [PhotoSession]
     @Environment(\.modelContext) private var modelContext
+    @State private var sessionToDelete: PhotoSession?
+    @State private var showDeleteConfirmation = false
+    @State private var isCompareMode = false
+    @State private var compareSelections: [PhotoSession] = []
 
     var body: some View {
         Group {
@@ -16,66 +20,153 @@ struct HistoryView: View {
         .background(ProofTheme.background)
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Delete Session", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                if let session = sessionToDelete {
+                    deleteSession(session)
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                sessionToDelete = nil
+            }
+        } message: {
+            Text("This session and its photos will be permanently deleted.")
+        }
     }
+
+    // MARK: - Empty State
 
     private var emptyState: some View {
         VStack {
             Spacer()
 
-            Text("No sessions yet")
-                .font(.system(size: 15, weight: .light))
-                .foregroundStyle(ProofTheme.textTertiary)
+            VStack(spacing: ProofTheme.spacingXS) {
+                Text("0")
+                    .font(.system(size: 48, weight: .ultraLight))
+                    .foregroundStyle(ProofTheme.accent)
+
+                Text("sessions")
+                    .font(.system(size: 15, weight: .light))
+                    .foregroundStyle(ProofTheme.textSecondary)
+            }
 
             Spacer()
+
+            NavigationLink(destination: SessionView()) {
+                Text("Start your first session")
+            }
+            .buttonStyle(ProofTheme.ProofButtonStyle())
+            .accessibilityLabel("Start your first photo session")
+            .padding(.horizontal, ProofTheme.spacingMD)
+            .padding(.bottom, ProofTheme.spacingXL)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Session List
+
     private var sessionList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                // Compare link
-                if sessions.count >= 2 {
-                    NavigationLink(destination: ComparisonView(sessionA: sessions[0], sessionB: sessions[1])) {
-                        HStack(spacing: ProofTheme.spacingMD) {
-                            Image(systemName: "arrow.left.and.right")
-                                .font(.system(size: 15, weight: .light))
-                                .foregroundStyle(ProofTheme.accent)
-
-                            Text("Compare last two sessions")
-                                .font(.system(size: 15, weight: .light))
-                                .foregroundStyle(ProofTheme.textSecondary)
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
+        List {
+            // Compare toggle
+            if sessions.count >= 2 {
+                Section {
+                    if isCompareMode {
+                        VStack(spacing: ProofTheme.spacingSM) {
+                            Text("Select 2 sessions to compare")
                                 .font(.system(size: 13, weight: .light))
                                 .foregroundStyle(ProofTheme.textTertiary)
+
+                            if compareSelections.count == 2 {
+                                NavigationLink(destination: ComparisonView(
+                                    sessionA: compareSelections[0],
+                                    sessionB: compareSelections[1]
+                                )) {
+                                    Text("Compare")
+                                }
+                                .buttonStyle(ProofTheme.ProofButtonStyle())
+                            }
+
+                            Button {
+                                isCompareMode = false
+                                compareSelections = []
+                            } label: {
+                                Text("Cancel")
+                                    .font(.system(size: 13, weight: .light))
+                                    .foregroundStyle(ProofTheme.textTertiary)
+                            }
                         }
-                        .frame(height: 52)
-                        .padding(.horizontal, ProofTheme.spacingMD)
-                    }
-                    .simultaneousGesture(TapGesture().onEnded { ProofTheme.hapticLight() })
+                        .frame(height: 88)
+                    } else {
+                        Button {
+                            isCompareMode = true
+                            compareSelections = []
+                        } label: {
+                            HStack(spacing: ProofTheme.spacingMD) {
+                                Image(systemName: "arrow.left.and.right")
+                                    .font(.system(size: 15, weight: .light))
+                                    .foregroundStyle(ProofTheme.accent)
 
-                    Rectangle()
-                        .fill(ProofTheme.separator)
-                        .frame(height: 1)
-                        .padding(.horizontal, ProofTheme.spacingMD)
-                        .padding(.bottom, ProofTheme.spacingSM)
+                                Text("Compare sessions")
+                                    .font(.system(size: 15, weight: .light))
+                                    .foregroundStyle(ProofTheme.textSecondary)
+                            }
+                            .frame(height: 44)
+                        }
+                        .accessibilityLabel("Compare two sessions")
+                    }
                 }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: ProofTheme.spacingMD, bottom: 0, trailing: ProofTheme.spacingMD))
+            }
 
-                // Session rows
+            // Session rows
+            Section {
                 ForEach(sessions) { session in
-                    NavigationLink(destination: ReviewView(session: session)) {
-                        sessionRow(session)
+                    if isCompareMode {
+                        Button {
+                            toggleCompareSelection(session)
+                        } label: {
+                            HStack {
+                                sessionRow(session)
+
+                                if compareSelections.contains(where: { $0.id == session.id }) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 20, weight: .light))
+                                        .foregroundStyle(ProofTheme.accent)
+                                } else {
+                                    Image(systemName: "circle")
+                                        .font(.system(size: 20, weight: .ultraLight))
+                                        .foregroundStyle(ProofTheme.textTertiary)
+                                }
+                            }
+                        }
+                        .accessibilityLabel("Select session from \(session.date.formatted(.dateTime.month(.abbreviated).day().year())) for comparison")
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 0, leading: ProofTheme.spacingMD, bottom: 0, trailing: ProofTheme.spacingMD))
+                        .listRowSeparator(.hidden)
+                    } else {
+                        NavigationLink(destination: ReviewView(session: session)) {
+                            sessionRow(session)
+                        }
+                        .accessibilityLabel("Session from \(session.date.formatted(.dateTime.month(.abbreviated).day().year()))")
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 0, leading: ProofTheme.spacingMD, bottom: 0, trailing: ProofTheme.spacingMD))
+                        .listRowSeparator(.hidden)
                     }
-                    .simultaneousGesture(TapGesture().onEnded { ProofTheme.hapticLight() })
-                    .padding(.horizontal, ProofTheme.spacingMD)
+                }
+                .onDelete { indexSet in
+                    if let index = indexSet.first {
+                        sessionToDelete = sessions[index]
+                        showDeleteConfirmation = true
+                    }
                 }
             }
         }
+        .listStyle(.plain)
         .scrollContentBackground(.hidden)
     }
+
+    // MARK: - Session Row
 
     private func sessionRow(_ session: PhotoSession) -> some View {
         VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
@@ -97,19 +188,39 @@ struct HistoryView: View {
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 100)
+                            .frame(height: 120)
                             .clipped()
                             .accessibilityLabel("\(pose.title) photo")
                     } else {
                         Rectangle()
                             .fill(ProofTheme.surface)
-                            .frame(height: 100)
+                            .frame(height: 120)
+                            .accessibilityLabel("\(pose.title) photo missing")
                     }
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
         }
-        .padding(.vertical, ProofTheme.spacingSM)
+        .padding(.vertical, ProofTheme.spacingMD)
+    }
+
+    // MARK: - Actions
+
+    private func deleteSession(_ session: PhotoSession) {
+        modelContext.delete(session)
+        sessionToDelete = nil
+    }
+
+    private func toggleCompareSelection(_ session: PhotoSession) {
+        if let index = compareSelections.firstIndex(where: { $0.id == session.id }) {
+            compareSelections.remove(at: index)
+        } else if compareSelections.count < 2 {
+            compareSelections.append(session)
+        } else {
+            // Replace the first selection
+            compareSelections[0] = compareSelections[1]
+            compareSelections[1] = session
+        }
     }
 }
 

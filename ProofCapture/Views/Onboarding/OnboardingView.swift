@@ -12,14 +12,11 @@ struct OnboardingView: View {
                 WelcomeStep(onNext: { currentStep = 1 })
                     .tag(0)
 
-                GenderStep(onNext: { currentStep = 2 })
+                SetupGuideStep(onNext: { currentStep = 2 })
                     .tag(1)
 
-                SetupGuideStep(onNext: { currentStep = 3 })
-                    .tag(2)
-
                 PermissionStep(onComplete: { hasCompletedOnboarding = true })
-                    .tag(3)
+                    .tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: currentStep)
@@ -27,7 +24,7 @@ struct OnboardingView: View {
             VStack {
                 Spacer()
                 HStack(spacing: ProofTheme.spacingSM) {
-                    ForEach(0..<4, id: \.self) { step in
+                    ForEach(0..<3, id: \.self) { step in
                         Circle()
                             .fill(step == currentStep ? ProofTheme.textPrimary : ProofTheme.textTertiary)
                             .frame(width: 6, height: 6)

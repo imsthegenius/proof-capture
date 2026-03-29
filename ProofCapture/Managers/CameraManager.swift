@@ -143,6 +143,12 @@ final class CameraManager: NSObject {
     private func captureOnePhoto() async -> UIImage? {
         await withCheckedContinuation { continuation in
             sessionQueue.async { [self] in
+                // Guard against stomping a pending continuation from the previous burst frame
+                if let pending = photoContinuation {
+                    pending.resume(returning: nil)
+                    photoContinuation = nil
+                }
+
                 photoContinuation = continuation
 
                 let settings = AVCapturePhotoSettings()

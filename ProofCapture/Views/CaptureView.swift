@@ -7,7 +7,8 @@ struct CaptureView: View {
     let lightingAnalyzer: LightingAnalyzer
     let currentPose: Pose
 
-    private var overallStatus: QualityLevel {
+    /// Composite readiness level drives the border glow state.
+    var overallStatus: QualityLevel {
         if !poseDetector.bodyDetected { return .poor }
         if lightingAnalyzer.quality == .poor && poseDetector.positionQuality == .poor { return .poor }
         if poseDetector.isReady && lightingAnalyzer.quality != .poor { return .good }
@@ -15,49 +16,68 @@ struct CaptureView: View {
         return .poor
     }
 
-    private var statusWord: String {
+    // MARK: - Border glow properties
+
+    private var borderColor: Color {
         switch overallStatus {
-        case .good: "READY"
-        case .fair: "ALMOST"
-        case .poor: poseDetector.bodyDetected ? "ADJUST" : "STEP IN"
+        case .good: ProofTheme.borderReady
+        case .fair: ProofTheme.borderAlmost
+        case .poor:
+            poseDetector.bodyDetected ? ProofTheme.borderNeutral : .clear
         }
     }
 
-    private var statusColor: Color {
+    private var borderWidth: CGFloat {
         switch overallStatus {
-        case .good: ProofTheme.statusGood
-        case .fair: ProofTheme.statusFair
-        case .poor: ProofTheme.statusPoor
+        case .good: ProofTheme.borderWidthReady
+        case .fair: ProofTheme.borderWidthAlmost
+        case .poor: ProofTheme.borderWidthNeutral
+        }
+    }
+
+    // Amber state pulses between 0.6 and 1.0 opacity
+    @State private var amberPulseActive = false
+
+    private var borderOpacity: Double {
+        switch overallStatus {
+        case .good: 1.0
+        case .fair: amberPulseActive ? 1.0 : 0.6
+        case .poor: 1.0 // neutral is already 30% via the color definition
         }
     }
 
     var body: some View {
         ZStack {
+            // Full-screen camera feed
             CameraPreview(session: cameraManager.session)
                 .ignoresSafeArea()
 
-            PoseGuideOverlay(poseDetector: poseDetector)
+            // Body outline overlay (colored to match border state)
+            PoseGuideOverlay(
+                poseDetector: poseDetector,
+                overallStatus: overallStatus
+            )
 
-            // Central status ring — readable from 2 meters
-            VStack(spacing: ProofTheme.spacingSM) {
-                ZStack {
-                    Circle()
-                        .stroke(statusColor.opacity(0.6), lineWidth: 3)
-                        .frame(width: 140, height: 140)
-
-                    Text(statusWord)
-                        .font(.system(size: 34, weight: .light))
-                        .foregroundStyle(statusColor)
-                }
-
-                // Pose label — small but useful if close enough
-                Text(currentPose.title.uppercased())
-                    .font(.system(size: 13, weight: .light))
-                    .tracking(4)
-                    .foregroundStyle(.white.opacity(0.5))
+            // "Step into frame" text when no body detected
+            if !poseDetector.bodyDetected {
+                Text("Step into frame")
+                    .font(.system(size: 40, weight: .ultraLight))
+                    .foregroundStyle(ProofTheme.overlayText.opacity(0.8))
+                    .transition(.opacity)
             }
 
-            // Camera flip — top right, larger touch target
+            // Pose label at bottom
+            VStack {
+                Spacer()
+
+                Text(currentPose.title.uppercased())
+                    .font(.system(size: 12, weight: .regular))
+                    .tracking(4)
+                    .foregroundStyle(ProofTheme.overlayText.opacity(0.4))
+                    .padding(.bottom, ProofTheme.spacingXL)
+            }
+
+            // Camera flip button — top right
             VStack {
                 HStack {
                     Spacer()
@@ -68,7 +88,7 @@ struct CaptureView: View {
                     } label: {
                         Image(systemName: "camera.rotate")
                             .font(.system(size: 17, weight: .light))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(ProofTheme.overlayText)
                             .frame(width: 52, height: 52)
                             .modifier(GlassCircle())
                     }
@@ -79,9 +99,37 @@ struct CaptureView: View {
 
                 Spacer()
             }
+
+            // Full-screen border glow overlay
+            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
+                .stroke(borderColor.opacity(borderOpacity), lineWidth: borderWidth)
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.5), value: overallStatus)
+                .allowsHitTesting(false)
+        }
+        .animation(.easeInOut(duration: 0.4), value: poseDetector.bodyDetected)
+        .onChange(of: overallStatus) { oldValue, newValue in
+            // Haptic feedback when transitioning from amber to green
+            if oldValue == .fair && newValue == .good {
+                ProofTheme.hapticLight()
+            }
+        }
+        .onAppear { startAmberPulse() }
+    }
+
+    // MARK: - Amber Pulse Animation
+
+    private func startAmberPulse() {
+        withAnimation(
+            .easeInOut(duration: 1.2)
+            .repeatForever(autoreverses: true)
+        ) {
+            amberPulseActive = true
         }
     }
 }
+
+// MARK: - Glass Circle Modifier
 
 private struct GlassCircle: ViewModifier {
     func body(content: Content) -> some View {

@@ -10,9 +10,10 @@ struct SetupGuideStep: View {
             Spacer()
                 .frame(height: ProofTheme.spacingXXL * 2)
 
-            Text("How it works")
+            Text("Setup")
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(ProofTheme.textPrimary)
+                .accessibilityAddTraits(.isHeader)
 
             Spacer()
                 .frame(height: ProofTheme.spacingXXL)
@@ -50,6 +51,7 @@ struct SetupGuideStep: View {
             .buttonStyle(ProofTheme.ProofButtonStyle())
             .padding(.horizontal, ProofTheme.spacingXL)
             .padding(.bottom, ProofTheme.spacingXXL)
+            .accessibilityLabel("Continue to permissions")
         }
         .onAppear {
             for i in 0..<3 {
@@ -66,6 +68,7 @@ struct SetupGuideStep: View {
                 .font(.system(size: 34, weight: .ultraLight))
                 .foregroundStyle(ProofTheme.accent)
                 .frame(width: 36)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: ProofTheme.spacingXS) {
                 Text(title)
@@ -80,5 +83,7 @@ struct SetupGuideStep: View {
         }
         .opacity(visibleRows.contains(index) ? 1 : 0)
         .offset(y: visibleRows.contains(index) ? 0 : 12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Step \(number): \(title). \(detail)")
     }
 }

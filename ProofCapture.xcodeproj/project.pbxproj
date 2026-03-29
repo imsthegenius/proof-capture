@@ -14,7 +14,6 @@
 		1D6BDD1BAFD3CB15581FE506 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15F33FD8C9AA5B3D8533D99 /* HistoryView.swift */; };
 		248693226403F21031B05F8A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57301627A44ECC0429ED1189 /* ContentView.swift */; };
 		24AF2C59BE7F6BC863765EB3 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A427F3031BBD88A31E8F38 /* SyncManager.swift */; };
-		38777CBFCD5FC6B00297A45E /* GenderStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F112EE399974550732B142 /* GenderStep.swift */; };
 		473D9A0D30ED791BDEE8E80A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A39E4699DCC5F49D0C30783 /* Theme.swift */; };
 		49420C6BE97DC5B45DBC98E0 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = E83A2880857034BF2FEA30A3 /* Supabase */; };
 		52E994F3514E9E9A0A7BD152 /* AudioGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200EBD3D73D02DBBB9A2D15A /* AudioGuide.swift */; };
@@ -54,7 +53,6 @@
 		41ADDCFB0E0EF008251FA1A2 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
 		57301627A44ECC0429ED1189 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5804C60DFA93278F46B0F54C /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
-		58F112EE399974550732B142 /* GenderStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenderStep.swift; sourceTree = "<group>"; };
 		6752B10C68518245E28E820F /* PhotoSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSession.swift; sourceTree = "<group>"; };
 		6774A6EAF55D83998CC16345 /* WelcomeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeStep.swift; sourceTree = "<group>"; };
 		67D046BC271F36FE6DBAB14D /* ProofCapture.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ProofCapture.entitlements; sourceTree = "<group>"; };
@@ -69,7 +67,7 @@
 		93B8D1C2776EB30F1E43A5C6 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		96BCB9375AB91F58FE4B1074 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		A15F33FD8C9AA5B3D8533D99 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
-		A70FA8027E65F3F1E6643716 /* ProofCapture.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ProofCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A70FA8027E65F3F1E6643716 /* ProofCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProofCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE14BCA5DBD31950EB4DB7EE /* UserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferences.swift; sourceTree = "<group>"; };
 		CED86D6109ED6D0040D2D650 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		CF3269C9626C5CF1C9E0E284 /* PoseGuideOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseGuideOverlay.swift; sourceTree = "<group>"; };
@@ -145,7 +143,6 @@
 		515285A5A0465FB38B4B6C41 /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
-				58F112EE399974550732B142 /* GenderStep.swift */,
 				1D1CFD325B029E856091D1CA /* OnboardingView.swift */,
 				3CCA47A9DAC3EEBC632811F3 /* PermissionStep.swift */,
 				EF9F7E3F242518734ECAE7EE /* SetupGuideStep.swift */,
@@ -227,8 +224,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 1A023A8EB934EC18467EE918 /* Build configuration list for PBXProject "ProofCapture" */;
 			developmentRegion = en;
@@ -267,7 +262,6 @@
 				7C537C7862263D205FEC5154 /* ComparisonView.swift in Sources */,
 				248693226403F21031B05F8A /* ContentView.swift in Sources */,
 				D0A93502605CCD4C60EDC719 /* FullPhotoView.swift in Sources */,
-				38777CBFCD5FC6B00297A45E /* GenderStep.swift in Sources */,
 				1D6BDD1BAFD3CB15581FE506 /* HistoryView.swift in Sources */,
 				99D196A461EAC12AE7B5673C /* HomeView.swift in Sources */,
 				F1FBD044FA82C5F5F242C14A /* LightingAnalyzer.swift in Sources */,
@@ -301,6 +295,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ProofCapture/ProofCapture.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 6VLN4PNWB2;
 				INFOPLIST_FILE = ProofCapture/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -383,6 +378,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ProofCapture/ProofCapture.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 6VLN4PNWB2;
 				INFOPLIST_FILE = ProofCapture/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

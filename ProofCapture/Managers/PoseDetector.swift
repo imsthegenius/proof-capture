@@ -2,7 +2,7 @@ import Vision
 import AVFoundation
 import UIKit
 
-@Observable
+@Observable @MainActor
 final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
 
     // MARK: - Public State
@@ -12,7 +12,9 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
     var feedback = "Step into the frame"
     var bodyRect: CGRect = .zero
 
-    var targetPose: Pose = .front
+    var targetPose: Pose = .front {
+        didSet { _targetPoseCache = targetPose }
+    }
     var detectedOrientation: Pose? = nil
     var poseMatchesExpected = false
     var isReady = false
@@ -20,12 +22,13 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
 
     // MARK: - Private
 
-    private var lastAnalysisTime: CFAbsoluteTime = 0
+    nonisolated(unsafe) private var lastAnalysisTime: CFAbsoluteTime = 0
+    nonisolated(unsafe) private var _targetPoseCache: Pose = .front
     private let analysisInterval: CFAbsoluteTime = 0.1 // ~10fps — sufficient for positioning guidance
 
     // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
 
-    func captureOutput(
+    nonisolated func captureOutput(
         _ output: AVCaptureOutput,
         didOutput sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
@@ -58,7 +61,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
 
     // MARK: - Analysis Pipeline
 
-    private func analyze(_ observation: VNHumanBodyPoseObservation) {
+    nonisolated private func analyze(_ observation: VNHumanBodyPoseObservation) {
         // 1. Collect visible joints for bounding box
         let trackingJoints: [VNHumanBodyPoseObservation.JointName] = [
             .nose, .neck, .leftShoulder, .rightShoulder,
@@ -90,8 +93,8 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         // 4. Orientation detection
         let orientation = detectOrientation(from: observation)
 
-        // 5. Pose match
-        let poseMatch = (orientation == targetPose)
+        // 5. Pose match (read from cache to avoid main actor hop)
+        let poseMatch = (orientation == _targetPoseCache)
 
         // 6. Arms check
         let arms = checkArmsRelaxed(from: observation)
@@ -104,7 +107,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         if positionResult.quality == .poor {
             feedbackText = positionResult.feedback
         } else if !poseMatch, let orientation {
-            feedbackText = orientationFeedback(target: targetPose, detected: orientation)
+            feedbackText = orientationFeedback(target: _targetPoseCache, detected: orientation)
         } else if !arms {
             feedbackText = "Relax your arms at your sides"
         } else if positionResult.quality == .fair {
@@ -126,7 +129,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         let feedback: String
     }
 
-    private func assessPosition(rect: CGRect) -> PositionResult {
+    nonisolated private func assessPosition(rect: CGRect) -> PositionResult {
         let centerX = rect.midX
         let bodyHeight = rect.height
         var issues: [String] = []
@@ -157,7 +160,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
 
     // MARK: - Orientation Detection
 
-    private func detectOrientation(from observation: VNHumanBodyPoseObservation) -> Pose? {
+    nonisolated private func detectOrientation(from observation: VNHumanBodyPoseObservation) -> Pose? {
         let nose = try? observation.recognizedPoint(.nose)
         let leftEar = try? observation.recognizedPoint(.leftEar)
         let rightEar = try? observation.recognizedPoint(.rightEar)
@@ -201,7 +204,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         return nil
     }
 
-    private func orientationFeedback(target: Pose, detected: Pose) -> String {
+    nonisolated private func orientationFeedback(target: Pose, detected: Pose) -> String {
         switch (target, detected) {
         case (.front, .side): "Turn to face the camera"
         case (.front, .back): "Turn around to face the camera"
@@ -215,7 +218,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
 
     // MARK: - Arms Relaxed Check
 
-    private func checkArmsRelaxed(from observation: VNHumanBodyPoseObservation) -> Bool {
+    nonisolated private func checkArmsRelaxed(from observation: VNHumanBodyPoseObservation) -> Bool {
         guard let leftWrist = try? observation.recognizedPoint(.leftWrist),
               let rightWrist = try? observation.recognizedPoint(.rightWrist),
               let leftHip = try? observation.recognizedPoint(.leftHip),
@@ -247,7 +250,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         return leftYOK && rightYOK && leftXOK && rightXOK
     }
 
-    private func angleBetween(p1: CGPoint, vertex: CGPoint, p2: CGPoint) -> CGFloat {
+    nonisolated private func angleBetween(p1: CGPoint, vertex: CGPoint, p2: CGPoint) -> CGFloat {
         let v1 = CGPoint(x: p1.x - vertex.x, y: p1.y - vertex.y)
         let v2 = CGPoint(x: p2.x - vertex.x, y: p2.y - vertex.y)
         let dot = v1.x * v2.x + v1.y * v2.y
@@ -260,11 +263,11 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
 
     // MARK: - State Publishing
 
-    private func publish(
+    nonisolated private func publish(
         detected: Bool, quality: QualityLevel, feedback: String, rect: CGRect,
         orientation: Pose?, poseMatch: Bool, arms: Bool, ready: Bool
     ) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             self.bodyDetected = detected
             self.positionQuality = quality

@@ -1,16 +1,25 @@
 import SwiftUI
+import Photos
 
 struct ReviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     private let poseImages: [Pose: UIImage]
+    private let session: PhotoSession?
+    private let isFromHistory: Bool
     @State private var isSaving = false
     @State private var savedSuccessfully = false
+    @State private var showDeleteConfirmation = false
 
+    // After capture — no session reference, shows "Session Complete"
     init(images: [Pose: UIImage]) {
         self.poseImages = images
+        self.session = nil
+        self.isFromHistory = false
     }
 
+    // From history — has session reference, shows date and delete option
     init(session: PhotoSession) {
         var images: [Pose: UIImage] = [:]
         for pose in Pose.allCases {
@@ -19,17 +28,27 @@ struct ReviewView: View {
             }
         }
         self.poseImages = images
+        self.session = session
+        self.isFromHistory = true
+    }
+
+    private var titleText: String {
+        if isFromHistory, let session {
+            return session.date.formatted(.dateTime.month(.abbreviated).day().year())
+        }
+        return "Session Complete"
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("Session Complete")
+            Text(titleText)
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(ProofTheme.textPrimary)
                 .padding(.top, ProofTheme.spacingXL)
+                .accessibilityAddTraits(.isHeader)
 
             Spacer()
-                .frame(height: ProofTheme.spacingXL)
+                .frame(height: ProofTheme.spacingLG)
 
             photoGrid
 
@@ -42,12 +61,25 @@ struct ReviewView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(ProofTheme.background)
         .toolbar(.hidden, for: .navigationBar)
+        .alert("Delete Session", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                deleteSession()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This session and its photos will be permanently deleted.")
+        }
     }
 
-    private var photoGrid: some View {
-        let photoWidth = (UIScreen.main.bounds.width - 64) / 3
+    // MARK: - Photo Grid
 
-        return HStack(spacing: ProofTheme.spacingMD) {
+    private var photoGrid: some View {
+        let horizontalPadding: CGFloat = ProofTheme.spacingMD * 2
+        let interItemSpacing: CGFloat = ProofTheme.spacingSM
+        let totalSpacing = horizontalPadding + (interItemSpacing * 2)
+        let photoWidth = (UIScreen.main.bounds.width - totalSpacing) / 3
+
+        return HStack(spacing: interItemSpacing) {
             ForEach(Pose.allCases) { pose in
                 VStack(spacing: ProofTheme.spacingSM) {
                     if let image = poseImages[pose] {
@@ -55,19 +87,20 @@ struct ReviewView: View {
                             Image(uiImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: photoWidth, height: photoWidth * 1.45)
+                                .frame(width: photoWidth, height: photoWidth * 1.6)
                                 .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-                                .accessibilityLabel("\(pose.title) progress photo")
+                                .accessibilityLabel("\(pose.title) progress photo, tap to view full screen")
                         }
                     } else {
                         RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
                             .fill(ProofTheme.surface)
-                            .frame(width: photoWidth, height: photoWidth * 1.45)
+                            .frame(width: photoWidth, height: photoWidth * 1.6)
                             .overlay(
-                                Text("—")
+                                Text("--")
                                     .font(.system(size: 15, weight: .light))
                                     .foregroundStyle(ProofTheme.textTertiary)
                             )
+                            .accessibilityLabel("\(pose.title) photo not taken")
                     }
 
                     Text(pose.title)
@@ -76,27 +109,33 @@ struct ReviewView: View {
                 }
             }
         }
-        .padding(.horizontal, ProofTheme.spacingLG)
+        .padding(.horizontal, ProofTheme.spacingMD)
     }
+
+    // MARK: - Bottom Buttons
 
     private var bottomButtons: some View {
         VStack(spacing: ProofTheme.spacingSM) {
-            Button {
-                Task { await saveToCamera() }
-            } label: {
-                Group {
-                    if isSaving {
-                        ProgressView()
-                            .tint(.white)
-                    } else if savedSuccessfully {
-                        Text("Saved")
-                    } else {
-                        Text("Save to Camera Roll")
+            if !isFromHistory {
+                // Save to camera roll — only after capture
+                Button {
+                    Task { await saveToCamera() }
+                } label: {
+                    Group {
+                        if isSaving {
+                            ProgressView()
+                                .tint(.white)
+                        } else if savedSuccessfully {
+                            Text("Saved")
+                        } else {
+                            Text("Save to Camera Roll")
+                        }
                     }
                 }
+                .buttonStyle(ProofTheme.ProofButtonStyle())
+                .disabled(isSaving || savedSuccessfully)
+                .accessibilityLabel(isSaving ? "Saving photos" : savedSuccessfully ? "Photos saved" : "Save photos to camera roll")
             }
-            .buttonStyle(ProofTheme.ProofButtonStyle())
-            .disabled(isSaving || savedSuccessfully)
 
             Button {
                 dismiss()
@@ -104,23 +143,53 @@ struct ReviewView: View {
                 Text("Done")
                     .font(.system(size: 15, weight: .light))
                     .foregroundStyle(ProofTheme.textSecondary)
+                    .frame(height: 44)
             }
-            .padding(.top, ProofTheme.spacingSM)
+            .accessibilityLabel("Close review")
+            .padding(.top, ProofTheme.spacingXS)
+
+            if isFromHistory {
+                Button {
+                    showDeleteConfirmation = true
+                } label: {
+                    Text("Delete Session")
+                        .font(.system(size: 15, weight: .light))
+                        .foregroundStyle(ProofTheme.statusPoor)
+                        .frame(height: 44)
+                }
+                .accessibilityLabel("Delete this session")
+                .padding(.top, ProofTheme.spacingXS)
+            }
         }
     }
 
+    // MARK: - Actions
+
     private func saveToCamera() async {
         isSaving = true
-        let manager = CameraManager()
+
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            isSaving = false
+            return
+        }
 
         for pose in Pose.allCases {
             if let image = poseImages[pose] {
-                _ = await manager.saveToPhotoLibrary(image)
+                try? await PHPhotoLibrary.shared().performChanges {
+                    PHAssetChangeRequest.creationRequestForAsset(from: image)
+                }
             }
         }
 
         isSaving = false
         savedSuccessfully = true
+    }
+
+    private func deleteSession() {
+        guard let session else { return }
+        modelContext.delete(session)
+        dismiss()
     }
 }
 
