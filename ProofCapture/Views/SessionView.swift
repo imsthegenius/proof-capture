@@ -21,6 +21,7 @@ struct SessionView: View {
     @State private var countdownValue: Int = 5
     @State private var showAbortConfirmation = false
     @State private var retakePose: Pose?
+    @State private var isRetaking = false
 
     @State private var cameraManager = CameraManager()
     @State private var poseDetector = PoseDetector()
@@ -284,6 +285,7 @@ struct SessionView: View {
     }
 
     private func retakeFromComplete(_ pose: Pose) async {
+        isRetaking = true
         capturedImages[pose] = nil
         currentPose = pose
         poseDetector.targetPose = pose
@@ -422,6 +424,14 @@ struct SessionView: View {
     private func autoAdvanceAfterPreview() async {
         try? await Task.sleep(for: .seconds(2))
         guard phase == .preview else { return }
+
+        // After a retake, always return to complete — don't advance the sequence
+        if isRetaking {
+            isRetaking = false
+            cameraManager.stopSession()
+            phase = .complete
+            return
+        }
 
         if let next = currentPose.next {
             currentPose = next

@@ -155,11 +155,13 @@ struct HistoryView: View {
                     }
                 }
                 .onDelete { indexSet in
+                    guard !isCompareMode else { return }
                     if let index = indexSet.first {
                         sessionToDelete = sessions[index]
                         showDeleteConfirmation = true
                     }
                 }
+                .deleteDisabled(isCompareMode)
             }
         }
         .listStyle(.plain)

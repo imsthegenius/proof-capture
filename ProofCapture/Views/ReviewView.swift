@@ -74,27 +74,27 @@ struct ReviewView: View {
     // MARK: - Photo Grid
 
     private var photoGrid: some View {
-        let horizontalPadding: CGFloat = ProofTheme.spacingMD * 2
-        let interItemSpacing: CGFloat = ProofTheme.spacingSM
-        let totalSpacing = horizontalPadding + (interItemSpacing * 2)
-        let photoWidth = (UIScreen.main.bounds.width - totalSpacing) / 3
+        GeometryReader { geometry in
+            let interItemSpacing: CGFloat = ProofTheme.spacingSM
+            let totalSpacing = (ProofTheme.spacingMD * 2) + (interItemSpacing * 2)
+            let photoWidth = (geometry.size.width - totalSpacing) / 3
 
-        return HStack(spacing: interItemSpacing) {
-            ForEach(Pose.allCases) { pose in
-                VStack(spacing: ProofTheme.spacingSM) {
-                    if let image = poseImages[pose] {
-                        NavigationLink(destination: FullPhotoView(image: image, title: "\(pose.title) progress photo")) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
+            HStack(spacing: interItemSpacing) {
+                ForEach(Pose.allCases) { pose in
+                    VStack(spacing: ProofTheme.spacingSM) {
+                        if let image = poseImages[pose] {
+                            NavigationLink(destination: FullPhotoView(image: image, title: "\(pose.title) progress photo")) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: photoWidth, height: photoWidth * 1.6)
+                                    .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
+                                    .accessibilityLabel("\(pose.title) progress photo, tap to view full screen")
+                            }
+                        } else {
+                            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
+                                .fill(ProofTheme.surface)
                                 .frame(width: photoWidth, height: photoWidth * 1.6)
-                                .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-                                .accessibilityLabel("\(pose.title) progress photo, tap to view full screen")
-                        }
-                    } else {
-                        RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                            .fill(ProofTheme.surface)
-                            .frame(width: photoWidth, height: photoWidth * 1.6)
                             .overlay(
                                 Text("--")
                                     .font(.system(size: 15, weight: .light))
@@ -108,8 +108,10 @@ struct ReviewView: View {
                         .foregroundStyle(ProofTheme.textTertiary)
                 }
             }
+            }
+            .padding(.horizontal, ProofTheme.spacingMD)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
-        .padding(.horizontal, ProofTheme.spacingMD)
     }
 
     // MARK: - Bottom Buttons
