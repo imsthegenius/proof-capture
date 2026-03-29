@@ -64,11 +64,11 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         let segRequest = VNGeneratePersonSegmentationRequest()
         segRequest.qualityLevel = .balanced // good quality, real-time capable
 
-        let faceQualityRequest = VNDetectFaceCaptureQualityRequest()
+        // Body-focused analysis — no face quality (we care about muscle definition, not face lighting)
 
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up)
         do {
-            try handler.perform([segRequest, faceQualityRequest])
+            try handler.perform([segRequest])
         } catch {
             publishResult(quality: .fair, feedback: "Analyzing lighting\u{2026}", brightness: 0.5)
             return
@@ -106,15 +106,12 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         let backlit = analyzeBacklighting(
             frame: frame, mask: scaledMask, personImage: personImage, extent: frameExtent
         )
-        let faceQuality = faceQualityRequest.results?.first?.faceCaptureQuality
-
-        // Composite assessment
+        // Composite assessment — body-focused (downlighting + shadow contrast = muscle definition)
         let result = compositeAssessment(
             exposure: exposure,
             downlight: downlight,
             shadows: shadows,
-            isBacklit: backlit,
-            faceQuality: faceQuality
+            isBacklit: backlit
         )
 
         publishResult(quality: result.quality, feedback: result.feedback, brightness: exposure.brightness)
@@ -219,10 +216,11 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         exposure: ExposureResult,
         downlight: DownlightResult,
         shadows: ShadowResult,
-        isBacklit: Bool,
-        faceQuality: Float?
+        isBacklit: Bool
     ) -> Assessment {
-        // Priority: critical problems first, then quality assessment
+        // Priority: critical problems first, then body-specific quality assessment.
+        // Good progress photos need: visible muscle definition from directional shadows,
+        // not just "well lit". A bright flat room is worse than a dimmer room with one overhead.
 
         if isBacklit {
             return Assessment(quality: .poor, feedback: "Strong light behind you \u{2014} try a different angle")
@@ -236,16 +234,23 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             return Assessment(quality: .poor, feedback: "Too bright \u{2014} move away from the light source")
         }
 
-        // Ideal: overhead light + strong shadows
+        // Ideal: overhead light + strong shadows on the body
+        // This is what makes muscle definition visible in progress photos
         if downlight.isPresent && shadows.contrast > 0.5 {
-            return Assessment(quality: .good, feedback: "Great overhead light \u{2014} shadows will show definition")
+            return Assessment(quality: .good, feedback: "Great light \u{2014} shadows will show definition")
         }
 
         if downlight.isPresent && shadows.contrast > 0.25 {
             return Assessment(quality: .good, feedback: "Good overhead light")
         }
 
-        // Decent exposure but flat lighting
+        // Directional light without clear downlighting (side window, lamp)
+        // Still produces shadow contrast on the body — acceptable
+        if shadows.contrast > 0.3 {
+            return Assessment(quality: .good, feedback: "Good directional light")
+        }
+
+        // Decent exposure but flat lighting — body will look washed out
         if shadows.contrast < 0.15 {
             return Assessment(quality: .fair, feedback: "Flat lighting \u{2014} stand under a single overhead light")
         }
@@ -256,16 +261,6 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
 
         if exposure.isMarginBright {
             return Assessment(quality: .fair, feedback: "Slightly bright \u{2014} adjust your position")
-        }
-
-        // Has some shadow contrast but no clear downlighting
-        if shadows.contrast > 0.3 {
-            return Assessment(quality: .good, feedback: "Good directional light")
-        }
-
-        // Face quality boost for front shots
-        if let fq = faceQuality, fq > 0.7 {
-            return Assessment(quality: .good, feedback: "Good lighting")
         }
 
         return Assessment(quality: .fair, feedback: "Try standing directly under an overhead light")

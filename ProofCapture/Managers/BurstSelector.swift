@@ -5,7 +5,8 @@ import Vision
 struct BurstSelector {
 
     /// Returns the best image from a burst using composite quality scoring.
-    /// For front poses, face quality is weighted heavily. For side/back, sharpness dominates.
+    /// Sharpness dominates for all poses — this is a body photo app.
+    /// Face quality is a minor tiebreaker for front shots only.
     static func selectBest(from images: [UIImage], pose: Pose = .front) -> UIImage? {
         guard !images.isEmpty else { return nil }
         if images.count == 1 { return images.first }
@@ -17,14 +18,15 @@ struct BurstSelector {
             let sharpness = sharpnessScore(for: image)
             let faceQuality: Float = (pose == .front) ? faceQualityScore(for: image) : 0
 
-            // Composite: sharpness always matters, face quality only for front
+            // Body-focused: sharpness is king. Face quality is a minor tiebreaker
+            // for front shots (avoids selecting frames with eyes closed/blurred face)
             let score: Float = switch pose {
             case .front:
-                sharpness * 0.4 + faceQuality * 0.6
+                sharpness * 0.75 + faceQuality * 0.25
             case .side:
-                sharpness * 0.8 + faceQuality * 0.2
+                sharpness * 0.9 + faceQuality * 0.1
             case .back:
-                sharpness  // Face quality irrelevant for back shots
+                sharpness
             }
 
             if score > bestScore {
