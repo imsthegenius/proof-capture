@@ -1,0 +1,4 @@
+# Sensitive / ephemeral — do not track
+settings.local.json
+worktrees/
+.supermemory-claude/
