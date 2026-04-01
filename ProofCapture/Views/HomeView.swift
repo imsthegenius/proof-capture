@@ -127,7 +127,7 @@ struct HomeView: View {
                 .padding(.horizontal, ProofTheme.spacingMD)
             }
             .accessibilityLabel("View session history")
-            .padding(.bottom, ProofTheme.spacingXL)
+            .padding(.bottom, ProofTheme.spacingXXL)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .proofDynamicType()
