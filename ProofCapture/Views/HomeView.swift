@@ -157,7 +157,7 @@ struct HomeView: View {
                         .proofFont(34, weight: .ultraLight, relativeTo: .largeTitle)
                         .foregroundStyle(ProofTheme.accent)
                         .contentTransition(.numericText())
-                        .animation(.easeOut(duration: 0.4), value: sessions.count)
+                        .animation(.easeInOut, value: sessions.count)
                     Text(sessions.count == 1 ? "session saved" : "sessions saved")
                         .proofFont(12, weight: .light, relativeTo: .caption1)
                         .foregroundStyle(ProofTheme.textTertiary)

@@ -17,6 +17,11 @@ Standalone iOS app that guides fitness coaching clients through taking consisten
 - Supabase (auth via Sign in with Apple, cloud backup via Storage + Postgres)
 - supabase-swift SDK (2.x)
 
+## Build Command
+```bash
+xcodebuild -project ProofCapture.xcodeproj -scheme ProofCapture -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
+```
+
 ## Brain Sync
 @~/Desktop/second-brain/ventures/proof/index.md
 
