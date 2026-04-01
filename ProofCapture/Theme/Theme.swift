@@ -25,6 +25,8 @@ enum ProofTheme {
 
     // Camera overlays — need high contrast on camera feed
     // Glass effects available on iOS 26+, use overlayPill as fallback
+    static let overlayScrimLight = Color.black.opacity(0.4)
+    static let overlayScrim = Color.black.opacity(0.5)
     static let overlayPill = Color.black.opacity(0.65)
     static let overlayText = Color.white
 

@@ -18,6 +18,7 @@ struct ProofCaptureApp: App {
         WindowGroup {
             SyncBootstrapView(syncManager: syncManager, authManager: authManager)
                 .preferredColorScheme(.dark)
+                .environment(\.legibilityWeight, .regular)
                 .environment(authManager)
                 .environment(syncManager)
         }

@@ -159,7 +159,7 @@ struct SessionView: View {
             }
 
             if viewModel.captureFlashOpacity > 0 {
-                Color.white
+                ProofTheme.overlayText
                     .opacity(viewModel.captureFlashOpacity)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
@@ -178,7 +178,7 @@ struct SessionView: View {
 
     private var countdownOverlay: some View {
         ZStack {
-            Color.black.opacity(0.5)
+            ProofTheme.overlayScrim
                 .ignoresSafeArea()
 
             VStack(spacing: ProofTheme.spacingMD) {
@@ -204,7 +204,7 @@ struct SessionView: View {
 
     private var capturingOverlay: some View {
         ZStack {
-            Color.black.opacity(0.4)
+            ProofTheme.overlayScrimLight
                 .ignoresSafeArea()
 
             if viewModel.captureFlashOpacity < 0.2 {

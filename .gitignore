@@ -1,4 +1,7 @@
 Supabase.xcconfig
 *.xcuserdata
+*.xcuserstate
+xcuserdata/
 DerivedData/
 .build/
+.DS_Store
