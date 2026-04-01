@@ -111,6 +111,7 @@ struct HomeView: View {
             .simultaneousGesture(TapGesture().onEnded { ProofTheme.hapticMedium() })
 
             Spacer()
+                .frame(minHeight: ProofTheme.spacingXXL)
 
             NavigationLink(destination: HistoryView()) {
                 HStack {
