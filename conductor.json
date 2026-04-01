@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "setup": "for f in .env .env.local .env.development .env.production; do [ -f \"$CONDUCTOR_ROOT_PATH/$f\" ] && ln -sf \"$CONDUCTOR_ROOT_PATH/$f\" \"$f\"; done; [ -f \"$CONDUCTOR_ROOT_PATH/.claude/settings.local.json\" ] && mkdir -p .claude && ln -sf \"$CONDUCTOR_ROOT_PATH/.claude/settings.local.json\" .claude/settings.local.json; [ -f package.json ] && npm install --prefer-offline --no-audit 2>/dev/null; true"
+  }
+}
