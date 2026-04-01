@@ -1,0 +1,1 @@
+/Users/imraan/Desktop/second-brain/hooks/brain-sync-check.sh
