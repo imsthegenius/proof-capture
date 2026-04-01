@@ -101,26 +101,31 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    /// Announces that the auto-capture is about to begin.
-    func speakAutoReady() async {
-        await speak("Looking good. Capturing in")
+    /// Plays a single countdown cue. The caller owns the visual countdown and timing
+    /// so audio and UI stay in lockstep.
+    func playCountdownTick(isFinal: Bool) {
+        // Countdown ticks are a safety cue and must still play in text mode.
+        let soundID: SystemSoundID = isFinal ? 1117 : 1057
+        AudioServicesPlaySystemSound(soundID)
     }
 
-    /// Plays ascending countdown beeps with 1-second intervals.
-    func playCountdown(seconds: Int = 3) async {
-        for i in 0..<seconds {
-            let isLast = (i == seconds - 1)
-            let soundID: SystemSoundID = isLast ? 1117 : 1057
-            AudioServicesPlaySystemSound(soundID)
-            try? await Task.sleep(for: .seconds(1))
+    func speakPoseTransition(from: Pose, to: Pose) async {
+        let message: String
+
+        switch (from, to) {
+        case (.front, .side):
+            message = "Great. Now turn to show your left side."
+        case (.side, .back):
+            message = "Good. Now turn to face away from the camera."
+        default:
+            message = "Next pose. Show your \(to.title.lowercased()) pose."
         }
+
+        await speak(message)
     }
 
-    /// Speaks the instruction, pauses briefly, then plays the countdown.
-    func speakAndCountdown(_ text: String, countdownSeconds: Int = 3) async {
-        await speak(text)
-        try? await Task.sleep(for: .milliseconds(500))
-        await playCountdown(seconds: countdownSeconds)
+    func speakSessionComplete() async {
+        await speak("All three poses captured. You're done.")
     }
 
     /// Stops any current speech immediately.

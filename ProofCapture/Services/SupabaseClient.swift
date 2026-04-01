@@ -2,14 +2,37 @@ import Supabase
 import Foundation
 
 enum AppSupabase {
+    private static let supabaseURL = configurationURL(for: "SUPABASE_URL")
+    private static let supabaseKey = configurationString(for: "SUPABASE_ANON_KEY")
+    private static let redirectToURL = configurationURL(for: "SUPABASE_REDIRECT_URL")
+
     static let client = SupabaseClient(
-        supabaseURL: URL(string: "https://pbntloqfayegjamsvmpy.supabase.co")!,
-        supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBibnRsb3FmYXllZ2phbXN2bXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTQ2NjQsImV4cCI6MjA5MDE5MDY2NH0.QxStEweDTRIefAl8bWxlaRzo8QXOIUMwrlIJgcjBPTE",
+        supabaseURL: supabaseURL,
+        supabaseKey: supabaseKey,
         options: SupabaseClientOptions(
             auth: .init(
-                redirectToURL: URL(string: "com.proof.capture://auth-callback"),
+                redirectToURL: redirectToURL,
                 flowType: .pkce
             )
         )
     )
+
+    private static func configurationString(for key: String) -> String {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
+              !value.isEmpty else {
+            fatalError("Missing required Info.plist value for \(key)")
+        }
+
+        return value
+    }
+
+    private static func configurationURL(for key: String) -> URL {
+        let value = configurationString(for: key)
+
+        guard let url = URL(string: value) else {
+            fatalError("Invalid Info.plist URL value for \(key)")
+        }
+
+        return url
+    }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Supabase
 import SwiftData
 import UIKit
@@ -9,6 +10,7 @@ final class SyncManager {
 
     private let client = AppSupabase.client
     private var modelContext: ModelContext?
+    private static let logger = Logger(subsystem: "com.proof.capture", category: "SyncManager")
 
     func configure(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -20,7 +22,7 @@ final class SyncManager {
         defer { isSyncing = false }
 
         let descriptor = FetchDescriptor<PhotoSession>(
-            predicate: #Predicate { $0.syncStatusRaw == 0 || $0.syncStatusRaw == 3 }
+            predicate: #Predicate { ($0.syncStatusRaw == 0 || $0.syncStatusRaw == 3) && $0.isComplete }
         )
 
         guard let sessions = try? modelContext.fetch(descriptor) else { return }
@@ -65,7 +67,7 @@ final class SyncManager {
             }
             try? modelContext.save()
         } catch {
-            print("Restore failed: \(error)")
+            Self.logger.error("Restore failed: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -119,7 +121,7 @@ final class SyncManager {
             session.syncStatusRaw = SyncStatus.synced.rawValue
             try? modelContext?.save()
         } catch {
-            print("Upload failed: \(error)")
+            Self.logger.error("Upload failed: \(String(describing: error), privacy: .public)")
             session.syncStatusRaw = SyncStatus.failed.rawValue
             try? modelContext?.save()
         }

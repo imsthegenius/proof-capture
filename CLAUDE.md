@@ -1,4 +1,5 @@
 @~/Desktop/second-brain/rules/brain-sync-rule.md
+@~/Desktop/second-brain/rules/linear-workflow-rule.md
 # Proof Capture — Guided Progress Photo App for Coaching Clients
 
 ## Project Overview

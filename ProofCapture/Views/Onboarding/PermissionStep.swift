@@ -11,12 +11,12 @@ struct PermissionStep: View {
                 .frame(height: ProofTheme.spacingXXL * 2)
 
             Text("Almost ready")
-                .font(.system(size: 24, weight: .light))
+                .proofFont(24, weight: .light, relativeTo: .title2)
                 .foregroundStyle(ProofTheme.textPrimary)
                 .accessibilityAddTraits(.isHeader)
 
             Text("We need camera access to capture\nyour progress photos.")
-                .font(.system(size: 15, weight: .light))
+                .proofFont(15, weight: .light, relativeTo: .body)
                 .foregroundStyle(ProofTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(6)
@@ -27,7 +27,7 @@ struct PermissionStep: View {
             // Voice choice
             VStack(spacing: ProofTheme.spacingSM) {
                 Text("Guide voice")
-                    .font(.system(size: 13, weight: .light))
+                    .proofFont(13, weight: .light, relativeTo: .footnote)
                     .foregroundStyle(ProofTheme.textTertiary)
 
                 HStack(spacing: ProofTheme.spacingMD) {
@@ -41,7 +41,7 @@ struct PermissionStep: View {
 
             if permissionDenied {
                 Text("Camera access is required.\nGo to Settings → Proof Capture → Camera.")
-                    .font(.system(size: 13, weight: .light))
+                    .proofFont(13, weight: .light, relativeTo: .footnote)
                     .foregroundStyle(ProofTheme.statusPoor)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, ProofTheme.spacingMD)
@@ -74,6 +74,7 @@ struct PermissionStep: View {
             .padding(.bottom, ProofTheme.spacingXXL)
             .accessibilityLabel("Grant camera access and continue")
         }
+        .proofDynamicType()
     }
 
     @State private var permissionDenied = false
@@ -88,7 +89,7 @@ struct PermissionStep: View {
         } label: {
             HStack(spacing: ProofTheme.spacingSM) {
                 Text(label)
-                    .font(.system(size: 15, weight: .light))
+                    .proofFont(15, weight: .light, relativeTo: .body)
                     .foregroundStyle(isSelected ? ProofTheme.background : ProofTheme.textPrimary)
 
                 if isSelected {
@@ -99,7 +100,7 @@ struct PermissionStep: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
+            .frame(minHeight: 52)
             .background(isSelected ? ProofTheme.accent : ProofTheme.surface)
             .overlay(
                 RoundedRectangle(cornerRadius: ProofTheme.radiusMD)

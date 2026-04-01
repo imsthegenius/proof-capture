@@ -4,6 +4,7 @@ struct ComparisonView: View {
     let sessionA: PhotoSession
     let sessionB: PhotoSession
     @State private var selectedPose: Pose = .front
+    @State private var hasAppeared = false
 
     private var earlierSession: PhotoSession {
         sessionA.date < sessionB.date ? sessionA : sessionB
@@ -15,25 +16,22 @@ struct ComparisonView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Pose picker buttons
             posePicker
 
-            // Swipeable photo comparison
-            TabView(selection: $selectedPose) {
-                ForEach(Pose.allCases) { pose in
-                    comparisonColumns(pose: pose)
-                        .tag(pose)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.3), value: selectedPose)
+            comparisonSurface
 
-            // Date labels
             dateLabels
         }
+        .proofDynamicType()
         .background(ProofTheme.background)
         .navigationTitle("Compare")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            guard !hasAppeared else { return }
+            withAnimation(.easeOut(duration: 0.45)) {
+                hasAppeared = true
+            }
+        }
     }
 
     // MARK: - Pose Picker
@@ -49,7 +47,7 @@ struct ComparisonView: View {
                 } label: {
                     VStack(spacing: ProofTheme.spacingXS) {
                         Text(pose.title)
-                            .font(.system(size: 13, weight: .light))
+                            .proofFont(13, weight: .light, relativeTo: .footnote)
                             .foregroundStyle(selectedPose == pose ? ProofTheme.textPrimary : ProofTheme.textTertiary)
 
                         Rectangle()
@@ -57,13 +55,31 @@ struct ComparisonView: View {
                             .frame(height: 1)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+                    .frame(minHeight: 44)
                 }
                 .accessibilityLabel("\(pose.title) pose comparison")
                 .accessibilityAddTraits(selectedPose == pose ? .isSelected : [])
             }
         }
         .padding(.horizontal, ProofTheme.spacingMD)
+        .opacity(hasAppeared ? 1 : 0)
+        .offset(y: hasAppeared ? 0 : 12)
+        .animation(.easeOut(duration: 0.45).delay(0.05), value: hasAppeared)
+    }
+
+    private var comparisonSurface: some View {
+        TabView(selection: $selectedPose) {
+            ForEach(Pose.allCases) { pose in
+                comparisonColumns(pose: pose)
+                    .tag(pose)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(maxHeight: .infinity)
+        .opacity(hasAppeared ? 1 : 0)
+        .scaleEffect(hasAppeared ? 1 : 0.985)
+        .offset(y: hasAppeared ? 0 : 16)
+        .animation(.easeOut(duration: 0.5).delay(0.12), value: hasAppeared)
     }
 
     // MARK: - Comparison Columns
@@ -92,7 +108,7 @@ struct ComparisonView: View {
                     .frame(maxWidth: .infinity, maxHeight: availableHeight)
                     .overlay(
                         Text("No photo")
-                            .font(.system(size: 13, weight: .light))
+                            .proofFont(13, weight: .light, relativeTo: .footnote)
                             .foregroundStyle(ProofTheme.textTertiary)
                     )
                     .accessibilityLabel("No \(pose.title) photo available")
@@ -103,31 +119,59 @@ struct ComparisonView: View {
     // MARK: - Date Labels
 
     private var dateLabels: some View {
-        HStack {
-            VStack(spacing: 2) {
-                Text("Earlier")
-                    .font(.system(size: 11, weight: .light))
-                    .foregroundStyle(ProofTheme.textTertiary)
-                Text(earlierSession.date.formatted(.dateTime.month(.abbreviated).day()))
-                    .font(.system(size: 13, weight: .light))
-                    .foregroundStyle(ProofTheme.textSecondary)
-            }
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Earlier session, \(earlierSession.date.formatted(.dateTime.month(.abbreviated).day()))")
+        VStack(spacing: ProofTheme.spacingSM) {
+            Text(weekDifferenceText)
+                .proofFont(12, weight: .light, relativeTo: .caption1)
+                .foregroundStyle(ProofTheme.statusGood)
+                .padding(.horizontal, ProofTheme.spacingMD)
+                .padding(.vertical, ProofTheme.spacingXS + 2)
+                .background(ProofTheme.statusGood.opacity(0.12), in: Capsule())
+                .accessibilityLabel("Sessions are \(weekDifferenceText)")
 
-            VStack(spacing: 2) {
-                Text("Recent")
-                    .font(.system(size: 11, weight: .light))
-                    .foregroundStyle(ProofTheme.textTertiary)
-                Text(recentSession.date.formatted(.dateTime.month(.abbreviated).day()))
-                    .font(.system(size: 13, weight: .light))
-                    .foregroundStyle(ProofTheme.textSecondary)
+            HStack {
+                VStack(spacing: 2) {
+                    Text("Earlier")
+                        .proofFont(11, weight: .light, relativeTo: .caption2)
+                        .foregroundStyle(ProofTheme.textTertiary)
+                    Text(earlierSession.date.formatted(.dateTime.month(.abbreviated).day()))
+                        .proofFont(13, weight: .light, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Earlier session, \(earlierSession.date.formatted(.dateTime.month(.abbreviated).day()))")
+
+                VStack(spacing: 2) {
+                    Text("Recent")
+                        .proofFont(11, weight: .light, relativeTo: .caption2)
+                        .foregroundStyle(ProofTheme.textTertiary)
+                    Text(recentSession.date.formatted(.dateTime.month(.abbreviated).day()))
+                        .proofFont(13, weight: .light, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Recent session, \(recentSession.date.formatted(.dateTime.month(.abbreviated).day()))")
             }
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Recent session, \(recentSession.date.formatted(.dateTime.month(.abbreviated).day()))")
         }
         .padding(.vertical, ProofTheme.spacingSM)
+        .opacity(hasAppeared ? 1 : 0)
+        .offset(y: hasAppeared ? 0 : 12)
+        .animation(.easeOut(duration: 0.45).delay(0.18), value: hasAppeared)
+    }
+
+    private var weekDifferenceText: String {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: earlierSession.date)
+        let end = calendar.startOfDay(for: recentSession.date)
+        let dayDifference = max(0, calendar.dateComponents([.day], from: start, to: end).day ?? 0)
+
+        guard dayDifference > 0 else { return "Same day" }
+
+        let weekDifference = max(0, calendar.dateComponents([.weekOfYear], from: start, to: end).weekOfYear ?? (dayDifference / 7))
+        guard weekDifference > 0 else { return "Less than 1 week later" }
+
+        let weekLabel = weekDifference == 1 ? "week" : "weeks"
+        return "\(weekDifference) \(weekLabel) later"
     }
 }

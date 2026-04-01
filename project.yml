@@ -19,6 +19,9 @@ targets:
   ProofCapture:
     type: application
     platform: iOS
+    configFiles:
+      Debug: Supabase.xcconfig
+      Release: Supabase.xcconfig
     sources:
       - path: ProofCapture
     dependencies:
@@ -44,3 +47,10 @@ targets:
         NSCameraUsageDescription: "Proof needs camera access to capture your progress photos."
         NSPhotoLibraryAddUsageDescription: "Proof saves your progress photos to your camera roll."
         NSSpeechRecognitionUsageDescription: "Proof uses audio to guide you through photo capture."
+        CFBundleURLTypes:
+          - CFBundleURLName: $(PRODUCT_BUNDLE_IDENTIFIER)
+            CFBundleURLSchemes:
+              - $(PRODUCT_BUNDLE_IDENTIFIER)
+        SUPABASE_URL: $(SUPABASE_URL)
+        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        SUPABASE_REDIRECT_URL: $(PRODUCT_BUNDLE_IDENTIFIER)://auth-callback

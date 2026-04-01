@@ -11,7 +11,7 @@ struct SetupGuideStep: View {
                 .frame(height: ProofTheme.spacingXXL * 2)
 
             Text("Setup")
-                .font(.system(size: 24, weight: .light))
+                .proofFont(24, weight: .light, relativeTo: .title2)
                 .foregroundStyle(ProofTheme.textPrimary)
                 .accessibilityAddTraits(.isHeader)
 
@@ -40,6 +40,14 @@ struct SetupGuideStep: View {
             }
             .padding(.horizontal, ProofTheme.spacingXL)
 
+            Text("Your photos stay completely private. Only you can see them.")
+                .proofFont(13, weight: .light, relativeTo: .footnote)
+                .foregroundStyle(ProofTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .padding(.horizontal, ProofTheme.spacingXL)
+                .padding(.top, ProofTheme.spacingLG)
+
             Spacer()
 
             Button(action: {
@@ -53,6 +61,7 @@ struct SetupGuideStep: View {
             .padding(.bottom, ProofTheme.spacingXXL)
             .accessibilityLabel("Continue to permissions")
         }
+        .proofDynamicType()
         .onAppear {
             for i in 0..<3 {
                 withAnimation(.easeOut(duration: 0.4).delay(Double(i) * 0.15)) {
@@ -65,18 +74,18 @@ struct SetupGuideStep: View {
     private func guideRow(index: Int, number: String, title: String, detail: String) -> some View {
         HStack(alignment: .top, spacing: ProofTheme.spacingMD) {
             Text(number)
-                .font(.system(size: 34, weight: .ultraLight))
+                .proofFont(34, weight: .ultraLight, relativeTo: .largeTitle)
                 .foregroundStyle(ProofTheme.accent)
                 .frame(width: 36)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: ProofTheme.spacingXS) {
                 Text(title)
-                    .font(.system(size: 17, weight: .light))
+                    .proofFont(17, weight: .light, relativeTo: .body)
                     .foregroundStyle(ProofTheme.textPrimary)
 
                 Text(detail)
-                    .font(.system(size: 13, weight: .light))
+                    .proofFont(13, weight: .light, relativeTo: .footnote)
                     .foregroundStyle(ProofTheme.textSecondary)
                     .lineSpacing(4)
             }

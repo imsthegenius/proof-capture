@@ -12,14 +12,14 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     // MARK: - Public state
 
     var quality: QualityLevel = .fair
-    var feedback: String = "Analyzing lighting\u{2026}"
+    var feedback: String = "Analyzing lighting…"
     var brightness: Double = 0.5
 
     // MARK: - Private
 
     private let ciContext = CIContext(options: [.useSoftwareRenderer: false])
     private var lastAnalysisTime: Date = .distantPast
-    private let analysisInterval: TimeInterval = 0.33 // ~3fps — heavier analysis than before
+    private let analysisInterval: TimeInterval = 0.33
 
     // MARK: - Internal result types
 
@@ -33,11 +33,21 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
 
     private struct DownlightResult {
         let isPresent: Bool
-        let gradient: Double // positive = top brighter than bottom
+        let gradient: Double
     }
 
     private struct ShadowResult {
-        let contrast: Double // 0-1, higher = more directional shadows
+        let contrast: Double
+    }
+
+    private struct MaskedBrightnessResult {
+        let brightness: Double
+        let coverage: Double
+    }
+
+    private struct Assessment {
+        let quality: QualityLevel
+        let feedback: String
     }
 
     // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
@@ -60,31 +70,26 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private func analyze(pixelBuffer: CVPixelBuffer) {
         let frame = CIImage(cvPixelBuffer: pixelBuffer)
 
-        // Batch Vision requests: person segmentation + face quality
         let segRequest = VNGeneratePersonSegmentationRequest()
-        segRequest.qualityLevel = .balanced // good quality, real-time capable
-
-        // Body-focused analysis — no face quality (we care about muscle definition, not face lighting)
+        segRequest.qualityLevel = .balanced
 
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up)
         do {
             try handler.perform([segRequest])
         } catch {
-            publishResult(quality: .fair, feedback: "Analyzing lighting\u{2026}", brightness: 0.5)
+            publishResult(quality: .fair, feedback: "Analyzing lighting…", brightness: 0.5)
             return
         }
 
-        // If no person detected, fall back to basic brightness analysis
         guard let segResult = segRequest.results?.first else {
             let basic = analyzeOverallExposure(frame: frame)
-            let feedback = basic.isTooDark ? "Too dark \u{2014} turn on more lights"
-                : basic.isTooLight ? "Too bright \u{2014} move away from light"
+            let feedback = basic.isTooDark ? "Too dark — turn on more lights"
+                : basic.isTooLight ? "Too bright — move away from light"
                 : "Step into frame"
             publishResult(quality: .fair, feedback: feedback, brightness: basic.brightness)
             return
         }
 
-        // Build person mask
         let maskImage = CIImage(cvPixelBuffer: segResult.pixelBuffer)
         let frameExtent = frame.extent
         let scaledMask = maskImage.transformed(by: CGAffineTransform(
@@ -92,21 +97,22 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             y: frameExtent.height / maskImage.extent.height
         ))
 
-        // Create person-isolated image (person pixels + black background)
         let black = CIImage(color: .black).cropped(to: frameExtent)
         let personImage = frame.applyingFilter("CIBlendWithMask", parameters: [
             kCIInputBackgroundImageKey: black,
             kCIInputMaskImageKey: scaledMask
         ])
 
-        // Run all analysis layers
-        let exposure = analyzeOverallExposure(frame: frame)
-        let downlight = analyzeDownlighting(personImage: personImage, extent: frameExtent)
-        let shadows = analyzeShadowContrast(personImage: personImage, extent: frameExtent)
+        let exposure = analyzePersonExposure(personImage: personImage, mask: scaledMask, extent: frameExtent)
+        let downlight = analyzeDownlighting(personImage: personImage, mask: scaledMask, extent: frameExtent)
+        let shadows = analyzeShadowContrast(personImage: personImage, mask: scaledMask, extent: frameExtent)
         let backlit = analyzeBacklighting(
-            frame: frame, mask: scaledMask, personImage: personImage, extent: frameExtent
+            frame: frame,
+            mask: scaledMask,
+            personImage: personImage,
+            extent: frameExtent
         )
-        // Composite assessment — body-focused (downlighting + shadow contrast = muscle definition)
+
         let result = compositeAssessment(
             exposure: exposure,
             downlight: downlight,
@@ -117,52 +123,53 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         publishResult(quality: result.quality, feedback: result.feedback, brightness: exposure.brightness)
     }
 
-    // MARK: - Layer 1: Overall exposure
+    // MARK: - Layer 1: Exposure
 
     private func analyzeOverallExposure(frame: CIImage) -> ExposureResult {
-        let b = regionBrightness(of: frame, in: frame.extent)
-        return ExposureResult(brightness: b)
+        let measuredBrightness = rawBrightness(of: frame, in: frame.extent)
+        return ExposureResult(brightness: measuredBrightness)
+    }
+
+    private func analyzePersonExposure(personImage: CIImage, mask: CIImage, extent: CGRect) -> ExposureResult {
+        let measuredBrightness = maskedBrightness(of: personImage, with: mask, in: extent)?.brightness
+            ?? rawBrightness(of: personImage, in: extent)
+        return ExposureResult(brightness: measuredBrightness)
     }
 
     // MARK: - Layer 2: Downlighting gradient
 
-    /// Splits the person into top and bottom halves. If the top half is brighter,
-    /// overhead light is casting shadows downward — ideal for muscle definition.
-    private func analyzeDownlighting(personImage: CIImage, extent: CGRect) -> DownlightResult {
+    private func analyzeDownlighting(personImage: CIImage, mask: CIImage, extent: CGRect) -> DownlightResult {
         let midY = extent.midY
-
-        // CIImage coordinate space: Y=0 at bottom
-        // "upper body" = top of frame = higher Y values
         let upperRect = CGRect(x: 0, y: midY, width: extent.width, height: extent.height - midY)
         let lowerRect = CGRect(x: 0, y: 0, width: extent.width, height: midY)
 
-        let upperBrightness = regionBrightness(of: personImage, in: upperRect)
-        let lowerBrightness = regionBrightness(of: personImage, in: lowerRect)
+        guard let upper = maskedBrightness(of: personImage, with: mask, in: upperRect),
+              let lower = maskedBrightness(of: personImage, with: mask, in: lowerRect) else {
+            return DownlightResult(isPresent: false, gradient: 0)
+        }
 
-        let gradient = upperBrightness - lowerBrightness
-        // Positive gradient means top is brighter = downlighting
-        // Threshold: > 0.03 is detectable overhead light
+        let gradient = upper.brightness - lower.brightness
         return DownlightResult(isPresent: gradient > 0.03, gradient: gradient)
     }
 
-    // MARK: - Layer 3: Shadow contrast (directional light quality)
+    // MARK: - Layer 3: Shadow contrast
 
-    /// Samples 4 quadrants of the person image and measures variance.
-    /// High variance = strong directional light = deep shadows = visible muscle definition.
-    /// Low variance = flat/diffused light = everything looks the same.
-    private func analyzeShadowContrast(personImage: CIImage, extent: CGRect) -> ShadowResult {
+    private func analyzeShadowContrast(personImage: CIImage, mask: CIImage, extent: CGRect) -> ShadowResult {
         let midX = extent.midX
         let midY = extent.midY
 
         let quadrants = [
-            CGRect(x: 0, y: midY, width: midX, height: extent.height - midY),     // top-left
-            CGRect(x: midX, y: midY, width: extent.width - midX, height: extent.height - midY), // top-right
-            CGRect(x: 0, y: 0, width: midX, height: midY),                         // bottom-left
-            CGRect(x: midX, y: 0, width: extent.width - midX, height: midY)        // bottom-right
+            CGRect(x: 0, y: midY, width: midX, height: extent.height - midY),
+            CGRect(x: midX, y: midY, width: extent.width - midX, height: extent.height - midY),
+            CGRect(x: 0, y: 0, width: midX, height: midY),
+            CGRect(x: midX, y: 0, width: extent.width - midX, height: midY)
         ]
 
-        let values = quadrants.map { regionBrightness(of: personImage, in: $0) }
-            .filter { $0 > 0.01 } // exclude quadrants with no person pixels
+        let values = quadrants.compactMap {
+            maskedBrightness(of: personImage, with: mask, in: $0)
+        }
+        .filter { $0.coverage > 0.04 }
+        .map(\.brightness)
 
         guard values.count >= 3 else {
             return ShadowResult(contrast: 0)
@@ -170,47 +177,37 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
 
         let mean = values.reduce(0, +) / Double(values.count)
         let variance = values.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(values.count)
-
-        // Map variance to 0-1 quality score
-        // variance > 0.003 = strong directional shadows (good)
-        // variance < 0.001 = flat lighting (bad)
-        let contrast = min(variance / 0.003, 1.0)
+        let contrast = min(variance / 0.02, 1.0)
 
         return ShadowResult(contrast: contrast)
     }
 
     // MARK: - Layer 4: Backlighting detection
 
-    /// Compares average brightness of person vs background.
-    /// If background is significantly brighter, the person is silhouetted.
     private func analyzeBacklighting(
         frame: CIImage,
         mask: CIImage,
         personImage: CIImage,
         extent: CGRect
     ) -> Bool {
-        // Person brightness (from already-masked image)
-        let personBrightness = regionBrightness(of: personImage, in: extent)
+        guard let person = maskedBrightness(of: personImage, with: mask, in: extent) else {
+            return false
+        }
 
-        // Background: invert mask and apply to frame
         let invertedMask = mask.applyingFilter("CIColorInvert")
         let black = CIImage(color: .black).cropped(to: extent)
         let bgImage = frame.applyingFilter("CIBlendWithMask", parameters: [
             kCIInputBackgroundImageKey: black,
             kCIInputMaskImageKey: invertedMask
         ])
-        let bgBrightness = regionBrightness(of: bgImage, in: extent)
 
-        // Backlit if background is substantially brighter than the person
-        return bgBrightness > personBrightness + 0.25
+        let background = maskedBrightness(of: bgImage, with: invertedMask, in: extent)?.brightness
+            ?? rawBrightness(of: bgImage, in: extent)
+
+        return background > person.brightness + 0.25
     }
 
     // MARK: - Composite assessment
-
-    private struct Assessment {
-        let quality: QualityLevel
-        let feedback: String
-    }
 
     private func compositeAssessment(
         exposure: ExposureResult,
@@ -218,49 +215,48 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         shadows: ShadowResult,
         isBacklit: Bool
     ) -> Assessment {
-        // Priority: critical problems first, then body-specific quality assessment.
-        // Good progress photos need: visible muscle definition from directional shadows,
-        // not just "well lit". A bright flat room is worse than a dimmer room with one overhead.
-
         if isBacklit {
-            return Assessment(quality: .poor, feedback: "Strong light behind you \u{2014} try a different angle")
+            return Assessment(quality: .poor, feedback: "Strong light behind you — try a different angle")
         }
 
         if exposure.isTooDark {
-            return Assessment(quality: .poor, feedback: "Too dark \u{2014} turn on more lights")
+            // Rescue: strong directional light with definition can save borderline darkness
+            if shadows.contrast > 0.35 && downlight.isPresent {
+                return Assessment(quality: .fair, feedback: "Dark but good directional light — more light would help")
+            }
+            // Also rescue for high contrast without downlight (e.g. dramatic side lighting)
+            if shadows.contrast > 0.2 {
+                return Assessment(quality: .fair, feedback: "Dark but defined shadows — try adding more light")
+            }
+            return Assessment(quality: .poor, feedback: "Too dark — turn on more lights")
         }
 
         if exposure.isTooLight {
-            return Assessment(quality: .poor, feedback: "Too bright \u{2014} move away from the light source")
+            return Assessment(quality: .poor, feedback: "Too bright — move away from the light source")
         }
 
-        // Ideal: overhead light + strong shadows on the body
-        // This is what makes muscle definition visible in progress photos
-        if downlight.isPresent && shadows.contrast > 0.5 {
-            return Assessment(quality: .good, feedback: "Great light \u{2014} shadows will show definition")
+        if downlight.isPresent && shadows.contrast > 0.35 {
+            return Assessment(quality: .good, feedback: "Great light — shadows will show definition")
         }
 
-        if downlight.isPresent && shadows.contrast > 0.25 {
+        if downlight.isPresent && shadows.contrast > 0.18 {
             return Assessment(quality: .good, feedback: "Good overhead light")
         }
 
-        // Directional light without clear downlighting (side window, lamp)
-        // Still produces shadow contrast on the body — acceptable
-        if shadows.contrast > 0.3 {
+        if shadows.contrast > 0.22 {
             return Assessment(quality: .good, feedback: "Good directional light")
         }
 
-        // Decent exposure but flat lighting — body will look washed out
-        if shadows.contrast < 0.15 {
-            return Assessment(quality: .fair, feedback: "Flat lighting \u{2014} stand under a single overhead light")
+        if shadows.contrast < 0.08 {
+            return Assessment(quality: .fair, feedback: "Flat lighting — stand under a single overhead light")
         }
 
         if exposure.isMarginDark {
-            return Assessment(quality: .fair, feedback: "A bit dark \u{2014} find more light")
+            return Assessment(quality: .fair, feedback: "A bit dark — find more light")
         }
 
         if exposure.isMarginBright {
-            return Assessment(quality: .fair, feedback: "Slightly bright \u{2014} adjust your position")
+            return Assessment(quality: .fair, feedback: "Slightly bright — adjust your position")
         }
 
         return Assessment(quality: .fair, feedback: "Try standing directly under an overhead light")
@@ -268,15 +264,28 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
 
     // MARK: - Core Image helpers
 
-    private func regionBrightness(of image: CIImage, in rect: CGRect) -> Double {
+    private func maskedBrightness(of image: CIImage, with mask: CIImage, in rect: CGRect) -> MaskedBrightnessResult? {
+        let croppedRect = rect.intersection(image.extent).intersection(mask.extent)
+        guard !croppedRect.isNull, !croppedRect.isEmpty else { return nil }
+
+        let coverage = rawBrightness(of: mask, in: croppedRect)
+        guard coverage > 0.02 else { return nil }
+
+        let measuredBrightness = min(rawBrightness(of: image, in: croppedRect) / coverage, 1.0)
+        return MaskedBrightnessResult(brightness: measuredBrightness, coverage: coverage)
+    }
+
+    private func rawBrightness(of image: CIImage, in rect: CGRect) -> Double {
         let cropped = image.cropped(to: rect)
         guard let avgFilter = CIFilter(
             name: "CIAreaAverage",
             parameters: [
                 kCIInputImageKey: cropped,
                 kCIInputExtentKey: CIVector(
-                    x: rect.origin.x, y: rect.origin.y,
-                    z: rect.size.width, w: rect.size.height
+                    x: rect.origin.x,
+                    y: rect.origin.y,
+                    z: rect.size.width,
+                    w: rect.size.height
                 )
             ]
         ),
@@ -294,7 +303,6 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             colorSpace: CGColorSpaceCreateDeviceRGB()
         )
 
-        // BT.601 perceptual luminance
         let r = Double(pixel[0]) / 255.0
         let g = Double(pixel[1]) / 255.0
         let b = Double(pixel[2]) / 255.0

@@ -1,5 +1,6 @@
 import AuthenticationServices
 import CryptoKit
+import OSLog
 import Supabase
 import SwiftUI
 
@@ -9,6 +10,7 @@ final class AuthManager {
     var userId: String?
 
     private var currentNonce: String?
+    private static let logger = Logger(subsystem: "com.proof.capture", category: "AuthManager")
 
     init() {
         Task { await restoreSession() }
@@ -43,11 +45,11 @@ final class AuthManager {
                 userId = session.user.id.uuidString
                 isAuthenticated = true
             } catch {
-                print("Supabase auth failed: \(error)")
+                Self.logger.error("Supabase auth failed: \(String(describing: error), privacy: .public)")
             }
 
         case .failure(let error):
-            print("Apple sign in failed: \(error)")
+            Self.logger.error("Apple sign in failed: \(String(describing: error), privacy: .public)")
         }
     }
 

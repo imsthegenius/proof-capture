@@ -18,7 +18,8 @@ enum UserPreferences {
 
     private enum Key {
         static let hasCompletedOnboarding = "hasCompletedOnboarding"
-        static let genderRaw = "genderRaw"
+        static let genderRaw = "userGender"
+        static let legacyGenderRaw = "genderRaw"
         static let countdownSeconds = "countdownSeconds"
     }
 
@@ -30,7 +31,21 @@ enum UserPreferences {
     }
 
     static var genderRaw: Int {
-        get { UserDefaults.standard.integer(forKey: Key.genderRaw) }
+        get {
+            let defaults = UserDefaults.standard
+
+            if let storedValue = defaults.object(forKey: Key.genderRaw) as? Int {
+                return storedValue
+            }
+
+            if let legacyValue = defaults.object(forKey: Key.legacyGenderRaw) as? Int {
+                defaults.set(legacyValue, forKey: Key.genderRaw)
+                defaults.removeObject(forKey: Key.legacyGenderRaw)
+                return legacyValue
+            }
+
+            return 0
+        }
         set { UserDefaults.standard.set(newValue, forKey: Key.genderRaw) }
     }
 

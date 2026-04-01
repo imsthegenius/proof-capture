@@ -35,7 +35,19 @@ struct SettingsView: View {
                 .accessibilityLabel("Countdown timer duration")
             } header: {
                 Text("CAPTURE")
-                    .font(.system(size: 12, weight: .light))
+                    .proofFont(12, weight: .light, relativeTo: .caption1)
+                    .foregroundStyle(ProofTheme.textTertiary)
+            }
+            .listRowBackground(ProofTheme.surface)
+
+            // Privacy reassurance
+            Section {
+                privacyRow(text: "Photos stored on-device only")
+                privacyRow(text: "Cloud backup encrypted to your Apple ID")
+                privacyRow(text: "No sharing, no analytics on photo content")
+            } header: {
+                Text("PRIVACY")
+                    .proofFont(12, weight: .light, relativeTo: .caption1)
                     .foregroundStyle(ProofTheme.textTertiary)
             }
             .listRowBackground(ProofTheme.surface)
@@ -57,15 +69,15 @@ struct SettingsView: View {
             Section {
                 VStack(spacing: ProofTheme.spacingSM) {
                     Text("Proof Capture")
-                        .font(.system(size: 15, weight: .light))
+                        .proofFont(15, weight: .light, relativeTo: .body)
                         .foregroundStyle(ProofTheme.textTertiary)
 
                     Text("v\(appVersion)")
-                        .font(.system(size: 13, weight: .ultraLight))
+                        .proofFont(13, weight: .ultraLight, relativeTo: .footnote)
                         .foregroundStyle(ProofTheme.textTertiary)
 
                     Text("Made for fitness coaches and their clients")
-                        .font(.system(size: 13, weight: .light))
+                        .proofFont(13, weight: .light, relativeTo: .footnote)
                         .foregroundStyle(ProofTheme.textTertiary)
                         .multilineTextAlignment(.center)
                 }
@@ -77,8 +89,24 @@ struct SettingsView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .proofDynamicType()
         .background(ProofTheme.background)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func privacyRow(text: String) -> some View {
+        Label {
+            Text(text)
+                .proofFont(15, weight: .light, relativeTo: .body)
+                .foregroundStyle(ProofTheme.textSecondary)
+        } icon: {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(ProofTheme.statusGood)
+        }
+        .padding(.vertical, ProofTheme.spacingXS)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(text)
     }
 }

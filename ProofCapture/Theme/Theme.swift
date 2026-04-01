@@ -14,6 +14,15 @@ enum ProofTheme {
 
     static let accent = Color(red: 235/255, green: 235/255, blue: 230/255)        // #EBEBE6 (warm white)
 
+    // MARK: - Animation Timing
+    static let animationFast: Double = 0.15
+    static let animationDefault: Double = 0.3
+    static let animationSlow: Double = 0.5
+    static let animationEntrance: Double = 0.6
+    static let staggerShort: Double = 0.05
+    static let staggerDefault: Double = 0.12
+    static let staggerLong: Double = 0.2
+
     // Camera overlays — need high contrast on camera feed
     // Glass effects available on iOS 26+, use overlayPill as fallback
     static let overlayPill = Color.black.opacity(0.65)
@@ -42,6 +51,18 @@ enum ProofTheme {
     static let spacingXL: CGFloat = 32
     static let spacingXXL: CGFloat = 48
 
+    // MARK: - Dynamic Type
+    static let dynamicTypeRange: ClosedRange<DynamicTypeSize> = .xSmall ... .xxxLarge
+
+    static func scaledFontSize(
+        _ baseSize: CGFloat,
+        relativeTo textStyle: UIFont.TextStyle = .body,
+        maximumScaleFactor: CGFloat = 1.35
+    ) -> CGFloat {
+        let scaledSize = UIFontMetrics(forTextStyle: textStyle).scaledValue(for: baseSize)
+        return min(scaledSize, baseSize * maximumScaleFactor)
+    }
+
     // MARK: - Corner Radius
     static let radiusSM: CGFloat = 8
     static let radiusMD: CGFloat = 12
@@ -65,28 +86,30 @@ enum ProofTheme {
     struct ProofButtonStyle: ButtonStyle {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
-                .font(.system(size: 15, weight: .light))
+                .font(.system(size: ProofTheme.scaledFontSize(15, relativeTo: .body), weight: .light))
+                .dynamicTypeSize(ProofTheme.dynamicTypeRange)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .frame(minHeight: 52)
                 .modifier(PrimaryButtonBackground())
                 .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
                 .opacity(configuration.isPressed ? 0.85 : 1.0)
-                .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+                .animation(.easeOut(duration: ProofTheme.animationFast), value: configuration.isPressed)
         }
     }
 
     struct ProofSecondaryButtonStyle: ButtonStyle {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
-                .font(.system(size: 15, weight: .light))
+                .font(.system(size: ProofTheme.scaledFontSize(15, relativeTo: .body), weight: .light))
+                .dynamicTypeSize(ProofTheme.dynamicTypeRange)
                 .foregroundStyle(ProofTheme.textSecondary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .frame(minHeight: 52)
                 .modifier(SecondaryButtonBackground())
                 .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
                 .opacity(configuration.isPressed ? 0.85 : 1.0)
-                .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+                .animation(.easeOut(duration: ProofTheme.animationFast), value: configuration.isPressed)
         }
     }
 
@@ -113,5 +136,23 @@ enum ProofTheme {
                     .clipShape(.capsule)
             }
         }
+    }
+}
+
+extension View {
+    func proofDynamicType() -> some View {
+        dynamicTypeSize(ProofTheme.dynamicTypeRange)
+    }
+
+    func proofFont(
+        _ baseSize: CGFloat,
+        weight: Font.Weight,
+        relativeTo textStyle: UIFont.TextStyle = .body,
+        maximumScaleFactor: CGFloat = 1.35
+    ) -> some View {
+        font(.system(
+            size: ProofTheme.scaledFontSize(baseSize, relativeTo: textStyle, maximumScaleFactor: maximumScaleFactor),
+            weight: weight
+        ))
     }
 }

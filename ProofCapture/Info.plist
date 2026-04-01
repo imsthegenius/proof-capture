@@ -26,6 +26,23 @@
 	<string>Proof saves your progress photos to your camera roll.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Proof uses audio to guide you through photo capture.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			</array>
+		</dict>
+	</array>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SUPABASE_REDIRECT_URL</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)://auth-callback</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

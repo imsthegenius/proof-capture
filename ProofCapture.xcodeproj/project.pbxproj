@@ -33,6 +33,7 @@
 		B7BA5AD9FBDFBCBD0763AACB /* PhotoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6752B10C68518245E28E820F /* PhotoSession.swift */; };
 		BE89A50596322410C9464BFE /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B8D1C2776EB30F1E43A5C6 /* AuthView.swift */; };
 		CB7E1FD7927116730A4B674E /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0095E1484CF0A9A2253C82 /* CaptureView.swift */; };
+		CF305A4BBD5F6B44E8DACB53 /* SessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C62D0B700471F1ECEBD2CDC /* SessionViewModel.swift */; };
 		D0A93502605CCD4C60EDC719 /* FullPhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7403C2EC1C3D7E4BCE2765C1 /* FullPhotoView.swift */; };
 		D8969189FCAB524CA6402B07 /* PoseDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F960F96385EF1679F4CDDD8 /* PoseDetector.swift */; };
 		E55A243556795084851F10BC /* SetupGuideStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF9F7E3F242518734ECAE7EE /* SetupGuideStep.swift */; };
@@ -62,12 +63,13 @@
 		6F960F96385EF1679F4CDDD8 /* PoseDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseDetector.swift; sourceTree = "<group>"; };
 		7403C2EC1C3D7E4BCE2765C1 /* FullPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullPhotoView.swift; sourceTree = "<group>"; };
 		7A39E4699DCC5F49D0C30783 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7C62D0B700471F1ECEBD2CDC /* SessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionViewModel.swift; sourceTree = "<group>"; };
 		819571813DFCC5178ED2A171 /* LightingAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightingAnalyzer.swift; sourceTree = "<group>"; };
 		8CDD1F714824469368789AAB /* ProofCaptureApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProofCaptureApp.swift; sourceTree = "<group>"; };
 		93B8D1C2776EB30F1E43A5C6 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		96BCB9375AB91F58FE4B1074 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		A15F33FD8C9AA5B3D8533D99 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
-		A70FA8027E65F3F1E6643716 /* ProofCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProofCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A70FA8027E65F3F1E6643716 /* ProofCapture.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ProofCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE14BCA5DBD31950EB4DB7EE /* UserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferences.swift; sourceTree = "<group>"; };
 		CED86D6109ED6D0040D2D650 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		CF3269C9626C5CF1C9E0E284 /* PoseGuideOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseGuideOverlay.swift; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 		D576AAEE18DCE3DA341D1F90 /* SessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionView.swift; sourceTree = "<group>"; };
 		E0BD8FF3B82212E1276657FA /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		EF9F7E3F242518734ECAE7EE /* SetupGuideStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideStep.swift; sourceTree = "<group>"; };
+		"TEMP_5B22DEC2-0B00-451A-8E4D-C4E4333F1C75" /* Supabase.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Supabase.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +121,14 @@
 				CE14BCA5DBD31950EB4DB7EE /* UserPreferences.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		3712962563DA2049ECCD4EDC /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				7C62D0B700471F1ECEBD2CDC /* SessionViewModel.swift */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		409E111AE29BF928C61A999A /* Managers */ = {
@@ -181,6 +192,7 @@
 				34D4868A973232597D3A95D1 /* Models */,
 				086AD1B3A7CCA3E7F2DA7C9B /* Services */,
 				2E843DB24518B897621334A4 /* Theme */,
+				3712962563DA2049ECCD4EDC /* ViewModels */,
 				61CE069BFC9341F5E222822B /* Views */,
 			);
 			path = ProofCapture;
@@ -192,6 +204,14 @@
 				A70FA8027E65F3F1E6643716 /* ProofCapture.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		"TEMP_4866F0F5-3E83-4FC3-8745-FDA4E56CE800" /* proof-capture */ = {
+			isa = PBXGroup;
+			children = (
+				"TEMP_5B22DEC2-0B00-451A-8E4D-C4E4333F1C75" /* Supabase.xcconfig */,
+			);
+			path = "proof-capture";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -224,6 +244,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 1A023A8EB934EC18467EE918 /* Build configuration list for PBXProject "ProofCapture" */;
 			developmentRegion = en;
@@ -275,6 +297,7 @@
 				05C0E90471F9F6BAD6DC2543 /* QualityLevel.swift in Sources */,
 				A1E592E8F5C9666DEC7411B0 /* ReviewView.swift in Sources */,
 				6212CE9D643905FFC0B96DCC /* SessionView.swift in Sources */,
+				CF305A4BBD5F6B44E8DACB53 /* SessionViewModel.swift in Sources */,
 				63956AECB8AB836BCD678ABF /* SettingsView.swift in Sources */,
 				E55A243556795084851F10BC /* SetupGuideStep.swift in Sources */,
 				F74A52A301CFEE2C837DA1EE /* SupabaseClient.swift in Sources */,
@@ -291,11 +314,11 @@
 /* Begin XCBuildConfiguration section */
 		4A095083FA82C9BF361070B5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_5B22DEC2-0B00-451A-8E4D-C4E4333F1C75" /* Supabase.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ProofCapture/ProofCapture.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 6VLN4PNWB2;
 				INFOPLIST_FILE = ProofCapture/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -374,11 +397,11 @@
 		};
 		D66A55800C70B776086029FC /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_5B22DEC2-0B00-451A-8E4D-C4E4333F1C75" /* Supabase.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ProofCapture/ProofCapture.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 6VLN4PNWB2;
 				INFOPLIST_FILE = ProofCapture/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

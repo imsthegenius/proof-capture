@@ -7,6 +7,8 @@ struct CaptureView: View {
     let lightingAnalyzer: LightingAnalyzer
     let currentPose: Pose
 
+    @AppStorage("guidanceMode") private var guidanceModeRawValue = GuidanceMode.voice.rawValue
+
     /// Composite readiness level drives the border glow state.
     var overallStatus: QualityLevel {
         if !poseDetector.bodyDetected { return .poor }
@@ -16,49 +18,69 @@ struct CaptureView: View {
         return .poor
     }
 
+    private var guidanceMode: GuidanceMode {
+        GuidanceMode(rawValue: guidanceModeRawValue) ?? .voice
+    }
+
+    private var isTextGuidanceMode: Bool {
+        guidanceMode == .text
+    }
+
     // MARK: - Border glow properties
 
     private var borderColor: Color {
         switch overallStatus {
-        case .good: ProofTheme.borderReady
-        case .fair: ProofTheme.borderAlmost
+        case .good:
+            return ProofTheme.borderReady
+        case .fair:
+            return ProofTheme.borderAlmost
         case .poor:
-            poseDetector.bodyDetected ? ProofTheme.borderNeutral : .clear
+            return poseDetector.bodyDetected ? ProofTheme.borderNeutral : .clear
         }
     }
 
     private var borderWidth: CGFloat {
+        if readinessLocked && overallStatus == .good {
+            return 6
+        }
+
         switch overallStatus {
-        case .good: ProofTheme.borderWidthReady
-        case .fair: ProofTheme.borderWidthAlmost
-        case .poor: ProofTheme.borderWidthNeutral
+        case .good:
+            return ProofTheme.borderWidthReady
+        case .fair:
+            return ProofTheme.borderWidthAlmost
+        case .poor:
+            return ProofTheme.borderWidthNeutral
         }
     }
 
-    // Amber state pulses between 0.6 and 1.0 opacity
     @State private var amberPulseActive = false
+    @State private var readinessLocked = false
 
     private var borderOpacity: Double {
         switch overallStatus {
-        case .good: 1.0
-        case .fair: amberPulseActive ? 1.0 : 0.6
-        case .poor: 1.0 // neutral is already 30% via the color definition
+        case .good:
+            return 1.0
+        case .fair:
+            return amberPulseActive ? 1.0 : 0.6
+        case .poor:
+            return 1.0
         }
     }
 
     var body: some View {
         ZStack {
-            // Full-screen camera feed
-            CameraPreview(session: cameraManager.session)
-                .ignoresSafeArea()
+            CameraPreview(
+                session: cameraManager.session,
+                isMirrored: cameraManager.currentPosition == .front
+            )
+            .ignoresSafeArea()
 
-            // Body outline overlay (colored to match border state)
             PoseGuideOverlay(
                 poseDetector: poseDetector,
                 overallStatus: overallStatus
             )
 
-            // "Step into frame" text when no body detected
             if !poseDetector.bodyDetected {
                 Text("Step into frame")
                     .font(.system(size: 40, weight: .ultraLight))
@@ -66,7 +88,10 @@ struct CaptureView: View {
                     .transition(.opacity)
             }
 
-            // Pose label at bottom
+            if isTextGuidanceMode && poseDetector.bodyDetected {
+                feedbackPills
+            }
+
             VStack {
                 Spacer()
 
@@ -80,10 +105,9 @@ struct CaptureView: View {
                         insertion: .offset(y: 8).combined(with: .opacity),
                         removal: .offset(y: -8).combined(with: .opacity)
                     ))
-                    .animation(.easeOut(duration: 0.3), value: currentPose)
+                    .animation(.easeOut(duration: ProofTheme.animationDefault), value: currentPose)
             }
 
-            // Camera flip button — top right
             VStack {
                 HStack {
                     Spacer()
@@ -106,18 +130,20 @@ struct CaptureView: View {
                 Spacer()
             }
 
-            // Full-screen border glow overlay
             RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
                 .stroke(borderColor.opacity(borderOpacity), lineWidth: borderWidth)
                 .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.5), value: overallStatus)
+                .animation(.easeInOut(duration: ProofTheme.animationSlow), value: overallStatus)
+                .animation(.easeInOut(duration: ProofTheme.animationDefault), value: readinessLocked)
                 .allowsHitTesting(false)
         }
-        .animation(.easeInOut(duration: 0.4), value: poseDetector.bodyDetected)
+        .animation(.easeInOut(duration: ProofTheme.animationEntrance), value: poseDetector.bodyDetected)
         .onChange(of: overallStatus) { oldValue, newValue in
-            // Haptic feedback when transitioning from amber to green
-            if oldValue == .fair && newValue == .good {
-                ProofTheme.hapticLight()
+            if oldValue != .good && newValue == .good {
+                ProofTheme.hapticMedium()
+                triggerReadinessLock()
+            } else if oldValue == .good && newValue != .good {
+                readinessLocked = false
             }
         }
         .onAppear { startAmberPulse() }
@@ -128,10 +154,92 @@ struct CaptureView: View {
     private func startAmberPulse() {
         withAnimation(
             .timingCurve(0.37, 0.0, 0.63, 1.0, duration: 1.2)
-            .repeatForever(autoreverses: true)
+                .repeatForever(autoreverses: true)
         ) {
             amberPulseActive = true
         }
+    }
+
+    private func triggerReadinessLock() {
+        Task { @MainActor in
+            readinessLocked = true
+            try? await Task.sleep(for: .milliseconds(600))
+            if overallStatus == .good {
+                readinessLocked = false
+            }
+        }
+    }
+
+    private var feedbackPills: some View {
+        VStack {
+            Spacer()
+
+            VStack(spacing: ProofTheme.spacingSM) {
+                if let positionText = positioningFeedbackText {
+                    feedbackPill(text: positionText, accent: positioningFeedbackAccent)
+                }
+
+                if let lightingText = lightingFeedbackText {
+                    feedbackPill(text: lightingText, accent: lightingFeedbackAccent)
+                }
+            }
+            .padding(.horizontal, ProofTheme.spacingMD)
+            .padding(.bottom, ProofTheme.spacingXL + 40)
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .animation(.easeInOut(duration: ProofTheme.animationFast), value: positioningFeedbackText)
+        .animation(.easeInOut(duration: ProofTheme.animationFast), value: lightingFeedbackText)
+        .allowsHitTesting(false)
+    }
+
+    private var positioningFeedbackText: String? {
+        guard poseDetector.bodyDetected else { return nil }
+        guard !poseDetector.isReady else { return nil }
+        return poseDetector.feedback
+    }
+
+    private var lightingFeedbackText: String? {
+        guard poseDetector.bodyDetected else { return nil }
+        guard lightingAnalyzer.quality != .good else { return nil }
+        return lightingAnalyzer.feedback
+    }
+
+    private var positioningFeedbackAccent: Color {
+        switch poseDetector.positionQuality {
+        case .good:
+            return ProofTheme.statusGood
+        case .fair:
+            return ProofTheme.statusFair
+        case .poor:
+            return ProofTheme.statusPoor
+        }
+    }
+
+    private var lightingFeedbackAccent: Color {
+        switch lightingAnalyzer.quality {
+        case .good:
+            return ProofTheme.statusGood
+        case .fair:
+            return ProofTheme.statusFair
+        case .poor:
+            return ProofTheme.statusPoor
+        }
+    }
+
+    private func feedbackPill(text: String, accent: Color) -> some View {
+        Text(text)
+            .font(.system(size: 13, weight: .light))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(ProofTheme.overlayText)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: 320)
+            .background(ProofTheme.overlayPill)
+            .overlay(
+                Capsule()
+                    .stroke(accent.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(Capsule())
     }
 }
 
