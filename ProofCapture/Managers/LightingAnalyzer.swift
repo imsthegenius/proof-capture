@@ -225,7 +225,8 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
                 return Assessment(quality: .fair, feedback: "Dark but good directional light — more light would help")
             }
             // Also rescue for high contrast without downlight (e.g. dramatic side lighting)
-            if shadows.contrast > 0.2 {
+            // But not for extremely dark scenes (exposure < 0.10) — truly unusable
+            if shadows.contrast > 0.2 && exposure.brightness >= 0.10 {
                 return Assessment(quality: .fair, feedback: "Dark but defined shadows — try adding more light")
             }
             return Assessment(quality: .poor, feedback: "Too dark — turn on more lights")

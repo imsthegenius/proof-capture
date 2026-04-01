@@ -149,7 +149,7 @@ func analyzeLighting(cgImage: CGImage) -> LightingReport {
     } else if isTooDark {
         if shadowContrast > 0.35 && downlightPresent {
             quality = .fair; feedback = "Dark but good directional light — more light would help"
-        } else if shadowContrast > 0.2 {
+        } else if shadowContrast > 0.2 && personBrightness >= 0.10 {
             quality = .fair; feedback = "Dark but defined shadows — try adding more light"
         } else {
             quality = .poor; feedback = "Too dark — turn on more lights"

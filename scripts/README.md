@@ -26,12 +26,12 @@ swift scripts/analyze-photo.swift scripts/test-images/01_good_overhead.jpg
 | `04_backlit_silhouette.jpg` | POOR — strong backlight | Body detected |
 | `05_very_dim.jpg` | POOR — too dark | Body detected |
 | `06_side_light.jpg` | GOOD — directional side light | Body detected |
-| `07_dark_gym.jpg` | FAIR — dark but defined shadows | Body detected |
-| `08_rim_light.jpg` | FAIR/GOOD — rim lighting | Body detected |
-| `backlit-window.jpg` | POOR — window backlight | Body detected |
-| `dim-room.jpg` | POOR/FAIR — low ambient light | Body detected |
-| `dramatic-side.jpg` | GOOD — strong directional | Body detected |
-| `flat-bathroom.jpg` | FAIR — flat bathroom lighting | Body detected |
+| `07_dark_gym.jpg` | POOR — too dark | Body detected |
+| `08_rim_light.jpg` | POOR — too dark (rim light only) | Body detected |
+| `backlit-window.jpg` | GOOD — directional gym lighting | Body detected |
+| `dim-room.jpg` | GOOD — strong directional overhead | Body detected |
+| `dramatic-side.jpg` | FAIR — dark but defined shadows | Body detected |
+| `flat-bathroom.jpg` | GOOD — directional overhead light | Body detected |
 | `gym-overhead.jpg` | GOOD — gym overhead | Body detected |
 
 ## What It Measures
