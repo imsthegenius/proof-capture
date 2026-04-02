@@ -58,7 +58,7 @@ Fetch it from Linear and proceed directly to Phase 2.
 ### If auto-picking:
 Follow this exact sequence — do NOT skip steps:
 
-1. **Fetch ALL tasks** in this project's Linear project (`LINEAR_PROJECT` from CLAUDE.md) that are in `Todo` status
+1. **Fetch ALL tasks** in this project's Linear project (`LINEAR_PROJECT` from CLAUDE.md) that are in `Todo`, `Backlog`, or `Unstarted` status (any status that means "not yet started" — different Linear workspaces use different names)
 2. **For EACH task**, check its `blockedBy` relations:
    - Fetch every blocker ticket's status
    - If ANY blocker is NOT `Done` or `Cancelled`, the task is **blocked** — skip it
