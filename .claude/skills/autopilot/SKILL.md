@@ -175,23 +175,49 @@ codex exec \
 
 ---
 
-## Phase 7: Read Codex Response
+## Phase 7: Verify Codex Actually Reviewed
 
-The `codex` tool returns `{threadId, content}`.
+<HARD-GATE>
+NEVER merge a PR without VERIFIED evidence that Codex reviewed it.
+If the Codex MCP call returned empty, errored, or you're unsure — DO NOT MERGE.
+Escalate to the user instead.
+</HARD-GATE>
 
-**Determine the outcome by checking both the response AND the actual state:**
+**Step 1: Check if Codex responded at all.**
 
-1. Read the `content` for Codex's verdict (`Approval decision: approved` or `not approved`)
-2. Verify against GitHub: `gh pr view <PR_NUM> --json reviewDecision,state -q '{reviewDecision, state}'`
-   - `reviewDecision: "APPROVED"` AND `state: "MERGED"` → Codex approved and merged
-   - `reviewDecision: "CHANGES_REQUESTED"` → Codex rejected
-3. Check Linear ticket status — if Codex set it to `Done`, it merged successfully
+If the `codex` MCP tool call or `codex exec` bash command:
+- Returned empty content → **STOP. Codex did not review. Escalate to user.**
+- Returned an error → **STOP. Codex did not review. Escalate to user.**
+- Timed out → **STOP. Codex did not review. Escalate to user.**
 
-### If Codex Merged Successfully:
+**Step 2: Verify a review exists on GitHub.**
 
-1. Clean up the worktree: `git worktree remove <path> --force` (or `ExitWorktree(action: "remove")`)
-2. Output the success summary
-3. **Stop.** The task is complete.
+Run this command and check the output:
+```bash
+gh api repos/<OWNER>/<REPO>/pulls/<PR_NUM>/reviews -q 'length'
+```
+- If the count is `0` → **STOP. No review exists. Codex did not review. Do NOT merge.**
+- If the count is > 0, check the latest review state:
+```bash
+gh api repos/<OWNER>/<REPO>/pulls/<PR_NUM>/reviews -q '.[-1].state'
+```
+- `APPROVED` → Codex approved. Proceed to merge.
+- `CHANGES_REQUESTED` → Codex rejected. Proceed to Phase 8 (fix).
+- Anything else → **STOP. Ambiguous state. Escalate to user.**
+
+**Step 3: Only merge if BOTH conditions are true:**
+1. Codex response content contains `Approval decision: approved`
+2. GitHub shows at least one review with state `APPROVED`
+
+If either condition is false, DO NOT MERGE.
+
+### If both conditions confirm approval:
+
+1. Merge the PR: `gh pr merge <PR_URL> --squash --delete-branch`
+2. Update Linear ticket to `Done`
+3. Clean up the worktree
+4. Output the success summary
+5. **Stop.** The task is complete.
 
 ### If Codex Rejected:
 
