@@ -166,7 +166,7 @@ If the `mcp__codex__codex` tool is available (check via ToolSearch for "codex"),
 
 ```json
 {
-  "prompt": "Use the merge-safety-review skill.\n\nLinear ticket: <TASK_ID>\nGitHub PR: #<PR_NUMBER> in <REPO_SLUG>\nPR URL: <PR_URL>\nBase branch: main\nBuild command: <from CLAUDE.md>\n\nRun the full merge-safety-review checklist: build, tests, lint, diff review, acceptance criteria, convention compliance, changed-file coverage.\n\nON PASS: approve the PR on GitHub, merge it (squash, delete branch), update Linear to Done, add comment 'Codex merge-safety-review passed. PR merged.'\n\nON FAIL: request changes on the GitHub PR with specific file/line feedback, update Linear with a rejection comment listing every failed check with file references.",
+  "prompt": "Use the merge-safety-review skill.\n\nLinear ticket: <TASK_ID>\nGitHub PR: #<PR_NUMBER> in <REPO_SLUG>\nPR URL: <PR_URL>\nBase branch: main\nBuild command: <from CLAUDE.md>\n\nRun the full merge-safety-review checklist: build, tests, lint, diff review, acceptance criteria, convention compliance, changed-file coverage.\n\nON PASS: Post a PR comment (not a review approval) with the full checklist results and the exact text 'CODEX VERDICT: PASS'. Then merge the PR (squash, delete branch), update Linear to Done, add Linear comment 'Codex merge-safety-review passed. PR merged.''\n\nON FAIL: request changes on the GitHub PR with specific file/line feedback, update Linear with a rejection comment listing every failed check with file references.",
   "cwd": "<worktree directory>",
   "sandbox": "danger-full-access",
   "approval-policy": "never"
@@ -205,24 +205,24 @@ If the `codex` MCP tool call or `codex exec` bash command:
 - Returned an error → **STOP. Codex did not review. Escalate to user.**
 - Timed out → **STOP. Codex did not review. Escalate to user.**
 
-**Step 2: Verify a review exists on GitHub.**
+**Step 2: Verify Codex posted its verdict on the PR.**
 
-Run this command and check the output:
+Check for a PR comment containing the verdict marker:
 ```bash
-gh api repos/<OWNER>/<REPO>/pulls/<PR_NUM>/reviews -q 'length'
+gh api repos/<OWNER>/<REPO>/issues/<PR_NUM>/comments -q '.[].body' | grep -c "CODEX VERDICT"
 ```
-- If the count is `0` → **STOP. No review exists. Codex did not review. Do NOT merge.**
-- If the count is > 0, check the latest review state:
+- If count is `0` → **STOP. Codex did not post a verdict. Do NOT merge.**
+- If found, check which verdict:
 ```bash
-gh api repos/<OWNER>/<REPO>/pulls/<PR_NUM>/reviews -q '.[-1].state'
+gh api repos/<OWNER>/<REPO>/issues/<PR_NUM>/comments -q '.[].body' | grep "CODEX VERDICT"
 ```
-- `APPROVED` → Codex approved. Proceed to merge.
-- `CHANGES_REQUESTED` → Codex rejected. Proceed to Phase 8 (fix).
-- Anything else → **STOP. Ambiguous state. Escalate to user.**
+- `CODEX VERDICT: PASS` → Codex approved. Proceed to merge.
+- `CODEX VERDICT: FAIL` → Codex rejected. Proceed to Phase 8 (fix).
+- Neither → **STOP. Ambiguous. Escalate to user.**
 
 **Step 3: Only merge if BOTH conditions are true:**
-1. Codex response content contains `Approval decision: approved`
-2. GitHub shows at least one review with state `APPROVED`
+1. Codex response content indicates pass (contains `CODEX VERDICT: PASS` or `Approval decision: approved`)
+2. A PR comment exists on GitHub containing `CODEX VERDICT: PASS`
 
 If either condition is false, DO NOT MERGE.
 
