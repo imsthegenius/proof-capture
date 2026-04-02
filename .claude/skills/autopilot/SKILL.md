@@ -52,10 +52,25 @@ PICK TASK ► IMPLEMENT ► SELF-REVIEW ► COMMIT+PUSH+PR ► UPDATE LINEAR
 
 ## Phase 1: Task Selection
 
-1. If a task ID was provided, fetch it from Linear
-2. Otherwise, query Linear for unblocked Todo tasks in this project (`LINEAR_PROJECT` from CLAUDE.md)
-3. Pick the highest priority task with no `blockedBy` dependencies on incomplete work
-4. If no tasks available, report "No unblocked tasks found" and stop
+### If a task ID was provided:
+Fetch it from Linear and proceed directly to Phase 2.
+
+### If auto-picking:
+Follow this exact sequence — do NOT skip steps:
+
+1. **Fetch ALL tasks** in this project's Linear project (`LINEAR_PROJECT` from CLAUDE.md) that are in `Todo` status
+2. **For EACH task**, check its `blockedBy` relations:
+   - Fetch every blocker ticket's status
+   - If ANY blocker is NOT `Done` or `Cancelled`, the task is **blocked** — skip it
+3. **From the remaining unblocked tasks**, check which ones are **blockers for other tasks** (have `blocks` relations). These are higher priority because completing them unblocks more work.
+4. **Pick using this priority order:**
+   - First: unblocked tasks that BLOCK the most other tasks (unblock the pipeline)
+   - Then: highest Linear priority (P1 > P2 > P3 > P4)
+   - Then: oldest task (created first)
+5. If NO unblocked tasks exist, report "No unblocked tasks found — all remaining tasks have incomplete blockers" and list what's blocking what, then stop.
+
+### Critical rule:
+**If task A blocks task B, ALWAYS do A before B.** Never pick a downstream task when its blocker is available. The whole point of the dependency graph is execution order — respect it.
 
 **Save for the entire loop:** task ID, title, full description, acceptance criteria, parent issue context (if any).
 
@@ -167,8 +182,11 @@ Parameters:
     - Do NOT change the Linear status (keep it In Review)
 
   cwd: "<worktree or project directory>"
-  sandbox: "workspace-write"
+  sandbox: "danger-full-access"
   approval-policy: "never"
+  config:
+    shell_environment_policy:
+      inherit: "all"
 ```
 
 **Save the `threadId`** from the response — you need it for follow-up reviews.

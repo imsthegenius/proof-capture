@@ -197,8 +197,11 @@ Parameters:
     - Do NOT change the Linear status (keep it In Review)
 
   cwd: "<worktree directory>"
-  sandbox: "workspace-write"
+  sandbox: "danger-full-access"
   approval-policy: "never"
+  config:
+    shell_environment_policy:
+      inherit: "all"
 ```
 
 **Save the `threadId`** from the response — you need it for follow-up reviews.
