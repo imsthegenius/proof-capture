@@ -139,57 +139,39 @@ Acceptance criteria addressed:
 
 ---
 
-## Phase 6: Notify Codex (MCP Tool Call)
+## Phase 6: Notify Codex for Review
 
-Call the `codex` MCP tool. This is a direct tool call — Codex receives the request immediately, no polling.
+**IMPORTANT: Do NOT use the `/codex` skill or run `codex review` via Bash. Those are wrong.**
 
-```
-Tool: codex
-Parameters:
-  prompt: |
-    Use the merge-safety-review skill.
+There are two ways to call Codex. Try them in order:
 
-    Check BOTH Linear and Git for full context:
+### Option A: Codex MCP tool (preferred)
 
-    **Linear ticket:** <TASK_ID>
-    - Read the ticket description and acceptance criteria from Linear
-    - Check parent issue context if one exists
+If the `mcp__codex__codex` tool is available (check via ToolSearch for "codex"), call it directly:
 
-    **GitHub PR:** #<PR_NUMBER> in <REPO_SLUG>
-    - PR URL: <PR_URL>
-    - Base branch: main
-
-    **Build command:** <from CLAUDE.md>
-
-    Run the full merge-safety-review checklist:
-    1. Build — run the build command, must pass zero errors
-    2. Tests — run if they exist
-    3. Lint — run if configured
-    4. Diff review — git diff main..HEAD against the base branch
-    5. Acceptance criteria — verify EACH one from the Linear ticket with evidence
-    6. Convention compliance — check against CLAUDE.md / AGENTS.md
-    7. Changed-file coverage — every changed file must be justified by the ticket
-
-    ON PASS:
-    - Approve the PR on GitHub
-    - Merge the PR (squash merge, delete branch)
-    - Update the Linear ticket status to Done
-    - Add a Linear comment: "Codex merge-safety-review passed. PR merged."
-
-    ON FAIL:
-    - Request changes on the GitHub PR with specific file/line feedback
-    - Update the Linear ticket with a rejection comment listing every failed check, file references, and what needs fixing — enough context that the implementing agent can fix from Linear alone
-    - Do NOT change the Linear status (keep it In Review)
-
-  cwd: "<worktree or project directory>"
-  sandbox: "danger-full-access"
-  approval-policy: "never"
-  config:
-    shell_environment_policy:
-      inherit: "all"
+```json
+{
+  "prompt": "Use the merge-safety-review skill.\n\nLinear ticket: <TASK_ID>\nGitHub PR: #<PR_NUMBER> in <REPO_SLUG>\nPR URL: <PR_URL>\nBase branch: main\nBuild command: <from CLAUDE.md>\n\nRun the full merge-safety-review checklist: build, tests, lint, diff review, acceptance criteria, convention compliance, changed-file coverage.\n\nON PASS: approve the PR on GitHub, merge it (squash, delete branch), update Linear to Done, add comment 'Codex merge-safety-review passed. PR merged.'\n\nON FAIL: request changes on the GitHub PR with specific file/line feedback, update Linear with a rejection comment listing every failed check with file references.",
+  "cwd": "<worktree or project directory>",
+  "sandbox": "danger-full-access",
+  "approval-policy": "never"
+}
 ```
 
-**Save the `threadId`** from the response — you need it for follow-up reviews.
+Save the `threadId` from the response for follow-up reviews.
+
+### Option B: Codex CLI fallback (if MCP not available)
+
+If the Codex MCP tool is not available, run Codex via Bash using `codex exec` (NOT `codex review`):
+
+```bash
+codex exec \
+  --full-auto \
+  -C "<worktree or project directory>" \
+  "Use the merge-safety-review skill to review PR #<PR_NUMBER> in <REPO_SLUG>. PR URL: <PR_URL>. Base branch: main. Build command: <build command>. Linear ticket: <TASK_ID>. ON PASS: approve and merge the PR, update Linear to Done. ON FAIL: request changes on the PR, post rejection to Linear."
+```
+
+**NEVER use `codex review` with a prompt — that syntax is invalid.** `codex review` only accepts `--base <branch>` without a prompt, or a prompt without `--base`. Use `codex exec` for prompted reviews.
 
 ---
 
