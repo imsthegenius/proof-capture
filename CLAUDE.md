@@ -1,4 +1,8 @@
 @~/Desktop/second-brain/rules/brain-sync-rule.md
+
+## Linear Project
+LINEAR_PROJECT: ""
+When fetching or creating Linear tickets, ALWAYS filter by this project. Never pull tickets from other projects.
 @~/Desktop/second-brain/rules/linear-workflow-rule.md
 # Proof Capture — Guided Progress Photo App for Coaching Clients
 
