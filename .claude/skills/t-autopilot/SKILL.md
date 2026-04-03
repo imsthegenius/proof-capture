@@ -66,18 +66,42 @@ Now proceed to Phase 2 (Implementation) in the worktree.
 Fetch it from Linear and proceed directly to Phase 0 step 3 (create worktree with the task slug).
 
 ### If auto-picking:
-Follow this exact sequence — do NOT skip steps:
 
-1. **Fetch ALL tasks** in this project's Linear project (`LINEAR_PROJECT` from CLAUDE.md) that are in `Todo`, `Backlog`, or `Unstarted` status (any status that means "not yet started" — different Linear workspaces use different names)
-2. **For EACH task**, check its `blockedBy` relations:
-   - Fetch every blocker ticket's status
+**IMPORTANT: The Linear MCP `linear_search_issues` tool has these constraints:**
+- `query` and `states` CANNOT be combined — using both causes a GraphQL error
+- There is NO `projectId` filter parameter
+- You must filter by project client-side using the `project.name` field in results
+
+Follow this exact sequence:
+
+1. **Read CLAUDE.md** to get the `LINEAR_PROJECT` value (e.g., "Mission Control — Content Orchestration")
+
+2. **Fetch Backlog tasks** — call `linear_search_issues` with ONLY the `states` parameter:
+   ```
+   linear_search_issues(states: ["Backlog"], first: 50)
+   ```
+   Do NOT pass `query` at the same time — it will error.
+
+3. **Filter by project** — from the results, keep only tasks where `project.name` matches `LINEAR_PROJECT`. Discard everything else.
+
+4. **If no Backlog tasks found**, also try `Todo` and `Unstarted`:
+   ```
+   linear_search_issues(states: ["Todo"], first: 50)
+   linear_search_issues(states: ["Unstarted"], first: 50)
+   ```
+   Filter by project name again.
+
+5. **For EACH matching task**, check its `blockedBy` relations (fetch each blocker's status):
    - If ANY blocker is NOT `Done` or `Cancelled`, the task is **blocked** — skip it
-3. **From the remaining unblocked tasks**, check which ones are **blockers for other tasks** (have `blocks` relations). These are higher priority because completing them unblocks more work.
-4. **Pick using this priority order:**
+
+6. **From the remaining unblocked tasks**, check which ones are **blockers for other tasks** (have `blocks` relations). These are higher priority because completing them unblocks more work.
+
+7. **Pick using this priority order:**
    - First: unblocked tasks that BLOCK the most other tasks (unblock the pipeline)
    - Then: highest Linear priority (P1 > P2 > P3 > P4)
    - Then: oldest task (created first)
-5. If NO unblocked tasks exist, report "No unblocked tasks found — all remaining tasks have incomplete blockers" and list what's blocking what, then stop.
+
+8. If NO unblocked tasks exist, report "No unblocked tasks found — all remaining tasks have incomplete blockers" and list what's blocking what, then stop.
 
 ### Critical rule:
 **If task A blocks task B, ALWAYS do A before B.** Never pick a downstream task when its blocker is available. The whole point of the dependency graph is execution order — respect it.
@@ -156,37 +180,34 @@ Acceptance criteria addressed:
 
 ## Phase 6: Notify Codex for Review
 
-**IMPORTANT: Do NOT use the `/codex` skill or run `codex review` via Bash. Those are wrong.**
+**IMPORTANT: Do NOT use the Codex MCP tool, the `/codex` skill, or `codex review`. Use `codex exec` via Bash only.**
 
-There are two ways to call Codex. Try them in order:
+The Codex MCP tool hangs because its server process caches stale config and has timeout issues on long reviews. `codex exec` runs a fresh process every time and is reliable.
 
-### Option A: Codex MCP tool (preferred)
-
-If the `mcp__codex__codex` tool is available (check via ToolSearch for "codex"), call it directly:
-
-```json
-{
-  "prompt": "Use the merge-safety-review skill.\n\nLinear ticket: <TASK_ID>\nGitHub PR: #<PR_NUMBER> in <REPO_SLUG>\nPR URL: <PR_URL>\nBase branch: main\nBuild command: <from CLAUDE.md>\n\nRun the full merge-safety-review checklist: build, tests, lint, diff review, acceptance criteria, convention compliance, changed-file coverage.\n\nON PASS: Post a PR comment (not a review approval) with the full checklist results and the exact text 'CODEX VERDICT: PASS'. Then merge the PR (squash, delete branch), update Linear to Done, add Linear comment 'Codex merge-safety-review passed. PR merged.''\n\nON FAIL: request changes on the GitHub PR with specific file/line feedback, update Linear with a rejection comment listing every failed check with file references.",
-  "cwd": "<worktree directory>",
-  "profile": "danger"
-}
-```
-
-Save the `threadId` from the response for follow-up reviews.
-
-### Option B: Codex CLI fallback (if MCP not available)
-
-If the Codex MCP tool is not available, run Codex via Bash using `codex exec` (NOT `codex review`):
+Run this via the Bash tool:
 
 ```bash
 codex exec \
   --full-auto \
   -p danger \
-  -C "<worktree directory>" \
-  "Use the merge-safety-review skill to review PR #<PR_NUMBER> in <REPO_SLUG>. PR URL: <PR_URL>. Base branch: main. Build command: <build command>. Linear ticket: <TASK_ID>. ON PASS: approve and merge the PR, update Linear to Done. ON FAIL: request changes on the PR, post rejection to Linear."
+  -C "<worktree or project directory>" \
+  -o /tmp/codex-review-output.txt \
+  "Use the merge-safety-review skill to review PR #<PR_NUMBER> in <REPO_SLUG>. PR URL: <PR_URL>. Base branch: main. Build command: <build command>. Linear ticket: <TASK_ID>. IMPORTANT: Do NOT use the GitHub review-approve endpoint (it fails for same-user PRs). Instead: ON PASS: post a PR comment (not a review approval) with the full checklist and the exact text 'CODEX VERDICT: PASS', then merge the PR (squash, delete branch), update Linear to Done, add Linear comment 'Codex merge-safety-review passed. PR merged.' ON FAIL: post a PR comment with the full checklist and the exact text 'CODEX VERDICT: FAIL', request changes on the PR with specific file/line feedback, update Linear with rejection details. Do NOT merge on fail."
 ```
 
-**NEVER use `codex review` with a prompt — that syntax is invalid.** `codex review` only accepts `--base <branch>` without a prompt, or a prompt without `--base`. Use `codex exec` for prompted reviews.
+**Key flags:**
+- `--full-auto` — no approval prompts, full sandbox access
+- `-p danger` — uses the danger profile (full disk + network access)
+- `-C` — sets the working directory to the worktree
+- `-o` — writes Codex's final message to a file for reliable parsing
+
+After the command completes, read the output:
+```bash
+cat /tmp/codex-review-output.txt
+```
+
+**NEVER use `codex review` with a prompt — that syntax is invalid.**
+**NEVER use the `mcp__codex__codex` MCP tool — it hangs on long reviews.**
 
 ---
 
