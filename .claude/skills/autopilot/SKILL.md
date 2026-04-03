@@ -153,8 +153,7 @@ If the `mcp__codex__codex` tool is available (check via ToolSearch for "codex"),
 {
   "prompt": "Use the merge-safety-review skill.\n\nLinear ticket: <TASK_ID>\nGitHub PR: #<PR_NUMBER> in <REPO_SLUG>\nPR URL: <PR_URL>\nBase branch: main\nBuild command: <from CLAUDE.md>\n\nRun the full merge-safety-review checklist: build, tests, lint, diff review, acceptance criteria, convention compliance, changed-file coverage.\n\nIMPORTANT: Do NOT use the GitHub review-approve endpoint (it fails for same-user PRs). Instead:\n\nON PASS: Post a PR comment (not a review approval) with the full checklist results and the exact text 'CODEX VERDICT: PASS'. Then merge the PR (squash, delete branch), update Linear to Done, add Linear comment 'Codex merge-safety-review passed. PR merged.'\n\nON FAIL: Post a PR comment with the full checklist results and the exact text 'CODEX VERDICT: FAIL'. Request changes on the GitHub PR with specific file/line feedback. Update Linear with a rejection comment listing every failed check with file references. Do NOT merge.",
   "cwd": "<worktree or project directory>",
-  "sandbox": "danger-full-access",
-  "approval-policy": "never"
+  "profile": "danger"
 }
 ```
 
@@ -167,6 +166,7 @@ If the Codex MCP tool is not available, run Codex via Bash using `codex exec` (N
 ```bash
 codex exec \
   --full-auto \
+  -p danger \
   -C "<worktree or project directory>" \
   "Use the merge-safety-review skill to review PR #<PR_NUMBER> in <REPO_SLUG>. PR URL: <PR_URL>. Base branch: main. Build command: <build command>. Linear ticket: <TASK_ID>. IMPORTANT: Do NOT use the GitHub review-approve endpoint. ON PASS: post a PR comment with 'CODEX VERDICT: PASS' and the full checklist, then merge (squash, delete branch), update Linear to Done. ON FAIL: post a PR comment with 'CODEX VERDICT: FAIL' and specific feedback, update Linear with rejection details. Do NOT merge on fail."
 ```
