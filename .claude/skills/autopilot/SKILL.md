@@ -1,51 +1,66 @@
 ---
 name: autopilot
-description: "Fully automated Linear task loop: pick task, implement, self-review, PR, Codex review via MCP, fix feedback, merge. Fire-and-forget. Use when user says 'autopilot', 'run the loop', 'pick a task and finish it', 'implement and review', 'fire and forget', or 'autopilot [task-id]'. Requires codex MCP server and Linear MCP configured."
+description: "Fully automated Linear task loop: pick task, implement, self-review, PR, Codex review via codex exec, fix feedback, merge. Fire-and-forget. Use when user says 'autopilot', 'run the loop', 'pick a task and finish it', 'implement and review', 'fire and forget', or 'autopilot [task-id]'."
 ---
 
 # Autopilot — Implement, Review, Merge
 
-Fully automated loop. Claude Code picks a Linear task, implements it, self-reviews, pushes a PR, updates Linear, then hands off to Codex via MCP for merge-safety-review. Codex checks both Linear and Git, approves or rejects with context on both platforms. On rejection, Claude Code reads feedback from both Linear and Git, fixes, and re-triggers Codex. Loop continues until Codex merges or escalation.
+Fully automated loop. Claude Code picks a Linear task, implements it, self-reviews, pushes a PR, updates Linear, then hands off to Codex for merge-safety-review. Codex checks both Linear and Git, and either merges the PR + updates Linear to Done, or rejects with feedback on both platforms. On rejection, Claude Code reads feedback from both Linear and Git, fixes, and re-triggers Codex. Loop continues until Codex merges or escalation.
+
+**Codex owns all review actions:** merge PR, update Linear to Done, post rejection comments. Claude Code never merges or marks Done.
 
 ## Prerequisites
 
 Before starting, verify:
-1. **Codex MCP** — call the `codex` tool with a test prompt if unsure. If missing, stop: "Add codex to .mcp.json: `{\"codex\": {\"command\": \"codex\", \"args\": [\"mcp-server\"]}}`"
-2. **Linear MCP** — Linear tools must be available for ticket management
-3. **GitHub CLI** — run `gh auth status` to confirm
-4. **CLAUDE.md** — must contain `LINEAR_PROJECT` for ticket scoping
-5. **Build command** — must be documented in CLAUDE.md or discoverable
+1. **Linear MCP** — Linear tools must be available for ticket management
+2. **GitHub CLI** — `gh` must be authenticated
+3. **CLAUDE.md** — must contain `LINEAR_PROJECT` for ticket scoping
+4. **Codex CLI** — `codex` must be installed and authenticated
 
 If any prerequisite is missing, stop and tell the user exactly what's needed.
 
 ## Inputs
 
 - `autopilot TWO-215` — work on a specific task
-- `autopilot` — auto-pick the next unblocked Todo task
+- `autopilot` — auto-pick the next unblocked task
 
 ## The Loop
 
 ```
-                    ┌──────────────────────────────────────────┐
-                    │                                          │
-PICK TASK ► IMPLEMENT ► SELF-REVIEW ► COMMIT+PUSH+PR ► UPDATE LINEAR
-                                                          │
-                                          NOTIFY CODEX (MCP tool call)
-                                                          │
-                                    Codex checks Linear + Git
-                                    Runs merge-safety-review
-                                                          │
-                                       ┌──────────────────┴──────────────┐
-                                    APPROVED                          REJECTED
-                                       │                                 │
-                              Codex merges PR                  Codex updates Linear
-                              Codex updates Linear→Done        Codex updates Git PR
-                              Codex tells Claude: "merged"     Codex tells Claude: "failed"
-                                       │                                 │
-                              Claude exits worktree           Claude reads Linear + Git
-                                                              Claude fixes issues
-                                                              Claude self-reviews ──────┘
-                                                                        (max 5 iterations)
+CLAUDE CODE              LINEAR         GIT            CODEX
+    │                      │              │               │
+    │── read tasks ───────►│              │               │
+    │◄─ pick unblocked ───│              │               │
+    │                      │              │               │
+    │  implement           │              │               │
+    │  SELF-REVIEW         │              │               │
+    │── commit+push ──────────────────────►│               │
+    │── create PR ────────────────────────►│               │
+    │── status→In Review ─►│              │               │
+    │── context comment ──►│              │               │
+    │                      │              │               │
+    │── "check Linear+Git" ──────────────────────────────►│
+    │                      │◄── read ticket ─────────────│
+    │                      │              │◄── read diff ─│
+    │                      │              │  merge-safety  │
+    │                      │              │               │
+    │                  ON FAIL:           │               │
+    │                      │◄── rejection comment ───────│
+    │                      │              │◄── PR changes │
+    │◄── "failed" ───────────────────────────────────────│
+    │── read Linear ──────►│              │               │
+    │── read PR comments ─────────────────►│               │
+    │  fix issues          │              │               │
+    │  SELF-REVIEW         │              │               │
+    │── commit+push ──────────────────────►│               │
+    │── status→In Review ─►│              │               │
+    │── "re-review" ─────────────────────────────────────►│
+    │                      │              │               │
+    │                  ON PASS:           │               │
+    │                      │◄── status→Done ─────────────│
+    │                      │              │◄── merge PR ──│
+    │◄── "merged" ───────────────────────────────────────│
+    │  clean up worktree   │              │               │
 ```
 
 ---
@@ -94,7 +109,7 @@ Follow this exact sequence:
 8. If NO unblocked tasks exist, report "No unblocked tasks found — all remaining tasks have incomplete blockers" and list what's blocking what, then stop.
 
 ### Critical rule:
-**If task A blocks task B, ALWAYS do A before B.** Never pick a downstream task when its blocker is available. The whole point of the dependency graph is execution order — respect it.
+**If task A blocks task B, ALWAYS do A before B.** Never pick a downstream task when its blocker is available.
 
 **Save for the entire loop:** task ID, title, full description, acceptance criteria, parent issue context (if any).
 
@@ -165,84 +180,74 @@ Acceptance criteria addressed:
 
 ## Phase 6: Notify Codex for Review
 
-**IMPORTANT: Do NOT use the Codex MCP tool, the `/codex` skill, or `codex review`. Use `codex exec` via Bash only.**
+**Do NOT use the `/codex` skill or `codex review`. Use `codex exec` via Bash.**
 
-The Codex MCP tool hangs because its server process caches stale config and has timeout issues on long reviews. `codex exec` runs a fresh process every time and is reliable.
-
-Run this via the Bash tool:
+Codex receives the full review request and is responsible for ALL review actions: running checks, posting results to GitHub and Linear, and merging on pass.
 
 ```bash
 codex exec \
-  --full-auto \
-  -p danger \
+  --dangerously-bypass-approvals-and-sandbox \
   -C "<worktree or project directory>" \
   -o /tmp/codex-review-output.txt \
-  "Use the merge-safety-review skill to review PR #<PR_NUMBER> in <REPO_SLUG>. PR URL: <PR_URL>. Base branch: main. Build command: <build command>. Linear ticket: <TASK_ID>. IMPORTANT: Do NOT use the GitHub review-approve endpoint (it fails for same-user PRs). Instead: ON PASS: post a PR comment (not a review approval) with the full checklist and the exact text 'CODEX VERDICT: PASS', then merge the PR (squash, delete branch), update Linear to Done, add Linear comment 'Codex merge-safety-review passed. PR merged.' ON FAIL: post a PR comment with the full checklist and the exact text 'CODEX VERDICT: FAIL', request changes on the PR with specific file/line feedback, update Linear with rejection details. Do NOT merge on fail."
+  "Use the merge-safety-review skill to review PR #<PR_NUMBER> in <REPO_SLUG>. PR URL: <PR_URL>. Base branch: main. Build command: <build command>. Linear ticket: <TASK_ID>.
+
+Run the full merge-safety-review checklist: build, tests, lint, diff review, acceptance criteria, convention compliance, changed-file coverage.
+
+ON PASS:
+- Post a PR comment with the full checklist results and 'CODEX VERDICT: PASS'
+- Merge the PR (squash merge, delete branch)
+- Update the Linear ticket status to Done
+- Add a Linear comment: 'Codex merge-safety-review passed. PR merged.'
+
+ON FAIL:
+- Post a PR comment with the full checklist results and 'CODEX VERDICT: FAIL'
+- Request changes on the GitHub PR with specific file/line feedback
+- Update the Linear ticket with a rejection comment listing every failed check
+- Do NOT merge"
 ```
 
-**Key flags:**
-- `--full-auto` — no approval prompts, full sandbox access
-- `-p danger` — uses the danger profile (full disk + network access)
-- `-C` — sets the working directory to the worktree
-- `-o` — writes Codex's final message to a file for reliable parsing
+**Key flag:** `--dangerously-bypass-approvals-and-sandbox` — NO sandbox, NO approval prompts. Codex gets full network access to post to GitHub, merge PRs, and update Linear. This is what makes Codex able to own the write actions.
 
 After the command completes, read the output:
 ```bash
 cat /tmp/codex-review-output.txt
 ```
 
-**NEVER use `codex review` with a prompt — that syntax is invalid.**
-**NEVER use the `mcp__codex__codex` MCP tool — it hangs on long reviews.**
-
 ---
 
-## Phase 7: Verify Codex Actually Reviewed
+## Phase 7: Read Codex Response and Act
 
-<HARD-GATE>
-NEVER merge a PR without VERIFIED evidence that Codex reviewed it.
-If the Codex MCP call returned empty, errored, or you're unsure — DO NOT MERGE.
-Escalate to the user instead.
-</HARD-GATE>
+Read `/tmp/codex-review-output.txt` for the verdict.
 
-**Step 1: Check if Codex responded at all.**
+**Check what Codex did:**
 
-If the `codex` MCP tool call or `codex exec` bash command:
-- Returned empty content → **STOP. Codex did not review. Escalate to user.**
-- Returned an error → **STOP. Codex did not review. Escalate to user.**
-- Timed out → **STOP. Codex did not review. Escalate to user.**
+1. Check if the PR was merged: `gh pr view <PR_NUM> --json state -q .state`
+2. Check Linear ticket status (via Linear MCP)
+3. Check for PR comments with the verdict: `gh api repos/<OWNER>/<REPO>/issues/<PR_NUM>/comments -q '.[].body' | grep "CODEX VERDICT"`
 
-**Step 2: Verify Codex posted its verdict on the PR.**
+### If Codex merged (PR state = MERGED, Linear = Done):
 
-Check for a PR comment containing the verdict marker:
-```bash
-gh api repos/<OWNER>/<REPO>/issues/<PR_NUM>/comments -q '.[].body' | grep -c "CODEX VERDICT"
-```
-- If count is `0` → **STOP. Codex did not post a verdict. Do NOT merge.**
-- If found, check which verdict:
-```bash
-gh api repos/<OWNER>/<REPO>/issues/<PR_NUM>/comments -q '.[].body' | grep "CODEX VERDICT"
-```
-- `CODEX VERDICT: PASS` → Codex approved. Proceed to merge.
-- `CODEX VERDICT: FAIL` → Codex rejected. Proceed to Phase 8 (fix).
-- Neither → **STOP. Ambiguous. Escalate to user.**
+Codex handled everything. Just:
+1. Clean up the worktree
+2. Output the success summary
+3. **Stop.** The task is complete.
 
-**Step 3: Only merge if BOTH conditions are true:**
-1. Codex response content indicates pass (contains `CODEX VERDICT: PASS` or `Approval decision: approved`)
-2. A PR comment exists on GitHub containing `CODEX VERDICT: PASS`
+### If Codex couldn't merge/post (sandbox limitation):
 
-If either condition is false, DO NOT MERGE.
+If Codex's output says PASS but the PR isn't merged (sandbox blocked writes):
+1. **Post PR comment** with Codex's review summary: `gh pr comment <PR_NUM> --body "<codex summary>"`
+2. **Merge the PR:** `gh pr merge <PR_URL> --squash --delete-branch`
+3. **Update Linear to Done** (via Linear MCP)
+4. Clean up worktree
+5. **Stop.**
 
-### If both conditions confirm approval:
-
-1. Merge the PR: `gh pr merge <PR_URL> --squash --delete-branch`
-2. Update Linear ticket to `Done`
-3. Clean up the worktree
-4. Output the success summary
-5. **Stop.** The task is complete.
-
-### If Codex Rejected:
+### If Codex rejected (VERDICT: FAIL):
 
 Continue to Phase 8.
+
+### If Codex output is empty or errored:
+
+**STOP. Escalate to user.** Do NOT merge.
 
 ---
 
@@ -250,8 +255,8 @@ Continue to Phase 8.
 
 **Read feedback from BOTH Linear and Git:**
 
-1. **Linear comments** — Codex posts rejection details on the ticket. Read the latest comment on the Linear ticket. This has acceptance-criteria-level feedback.
-2. **GitHub PR reviews** — Codex requests changes on the PR. Read the review:
+1. **Linear comments** — Codex posts rejection details on the ticket. Read the latest comment.
+2. **GitHub PR reviews** — Codex requests changes on the PR:
    ```bash
    gh api repos/<OWNER>/<REPO>/pulls/<PR_NUM>/reviews -q '.[-1].body'
    ```
@@ -260,23 +265,16 @@ Continue to Phase 8.
    gh api repos/<OWNER>/<REPO>/pulls/<PR_NUM>/comments -q '.[].body'
    ```
 
-**Fix every issue identified.** Address both the Linear-level feedback (acceptance criteria, missing functionality) and the Git-level feedback (code quality, specific file issues).
+**If Codex couldn't post to Linear/Git** (sandbox limitation), read the feedback from `/tmp/codex-review-output.txt` instead.
+
+**Fix every issue identified.** Address both acceptance criteria failures and code quality issues.
 
 **Then go back to Phase 3 (Self-Review):**
 - Self-review the fixes
 - Commit: `fix: address codex review feedback (iteration N) (TWO-<number>)`
 - Push to the same branch (PR updates automatically — do NOT create a new PR)
 - Update Linear: add a comment noting fixes were pushed
-- Run `codex exec` again via Bash (same command as Phase 6, fresh process):
-
-```bash
-codex exec \
-  --full-auto \
-  -p danger \
-  -C "<worktree or project directory>" \
-  -o /tmp/codex-review-output.txt \
-  "Use the merge-safety-review skill to RE-REVIEW PR #<PR_NUMBER> in <REPO_SLUG>. PR URL: <PR_URL>. Fixes were pushed for the issues you previously flagged. Base branch: main. Build command: <build command>. Linear ticket: <TASK_ID>. Check that each previously flagged issue is now resolved. ON PASS: post a PR comment with 'CODEX VERDICT: PASS', merge, update Linear to Done. ON FAIL: post 'CODEX VERDICT: FAIL' with remaining issues."
-```
+- Re-run `codex exec` (same command as Phase 6 with `--dangerously-bypass-approvals-and-sandbox`, fresh process)
 
 **Then go back to Phase 7** to read the new response.
 
@@ -309,8 +307,8 @@ If the review loop runs **5 iterations** without passing:
 
 ## Guardrails
 
-- **Claude Code never marks its own work as Done** — only a successful Codex merge triggers Done
-- **Claude Code never merges the PR** — Codex handles merge on approval
+- **Claude Code never marks its own work as Done** — only Codex sets Done
+- **Claude Code never merges the PR** — Codex merges on approval. Claude only merges as fallback if Codex passed but sandbox blocked the merge.
 - **Never skip self-review** — this catches obvious issues cheaply
 - **Never push code that doesn't build** — fix build errors before pushing
 - **Never create a new PR for fixes** — push to the same branch
@@ -321,13 +319,12 @@ If the review loop runs **5 iterations** without passing:
 
 | Error | Action |
 |-------|--------|
-| Codex MCP tool not available | Stop. Tell user to check `.mcp.json` |
 | Linear MCP not available | Stop. Tell user Linear MCP must be configured |
 | `gh` not authenticated | Stop. Tell user to run `gh auth login` |
 | Build fails before PR | Fix the build. Do not push broken code |
 | PR has merge conflicts | `git fetch origin main && git rebase origin/main`, resolve, force-push, re-trigger Codex |
 | Codex times out or empty response | Retry once. If fails again, escalate to user |
-| Codex merged but Linear not updated | Update Linear to Done manually |
+| Codex passed but sandbox blocked merge | Claude merges as fallback (see Phase 7) |
 
 ## Output
 
