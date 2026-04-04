@@ -234,30 +234,53 @@ func analyzePose(cgImage: CGImage) -> PoseReport {
     let ys = points.map(\.y)
     let rect = CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
 
-    // Position assessment
-    let centerX = rect.midX
-    let bodyHeight = rect.height
+    // Ankle confidence gate (TWO-515)
+    let leftAnkleConf = (try? observation.recognizedPoint(.leftAnkle))?.confidence ?? 0
+    let rightAnkleConf = (try? observation.recognizedPoint(.rightAnkle))?.confidence ?? 0
+    let anklesDetected = leftAnkleConf > 0.3 || rightAnkleConf > 0.3
+
+    let assessmentRect: CGRect
+    if !anklesDetected && rect.height > 0 {
+        let estimatedFullHeight = min(rect.height / 0.55, 1.0)
+        assessmentRect = CGRect(
+            x: rect.origin.x,
+            y: max(0, rect.origin.y - (estimatedFullHeight - rect.height)),
+            width: rect.width,
+            height: estimatedFullHeight
+        )
+    } else {
+        assessmentRect = rect
+    }
+
+    // Position assessment (using assessmentRect for distance, rect for display)
+    let centerX = assessmentRect.midX
+    let bodyHeight = assessmentRect.height
     var issues: [String] = []
-    if bodyHeight > 0.80 { issues.append("Too close (height \(String(format: "%.2f", bodyHeight)))") }
-    else if bodyHeight < 0.35 { issues.append("Too far (height \(String(format: "%.2f", bodyHeight)))") }
+    if bodyHeight > 0.85 { issues.append("Too close (height \(String(format: "%.2f", bodyHeight)))") }
+    else if bodyHeight < 0.25 { issues.append("Too far (height \(String(format: "%.2f", bodyHeight)))") }
+    else if bodyHeight < 0.40 { issues.append("Tip: step closer (height \(String(format: "%.2f", bodyHeight)))") }
     if centerX < 0.35 { issues.append("Off-center left (x \(String(format: "%.2f", centerX)))") }
     else if centerX > 0.65 { issues.append("Off-center right (x \(String(format: "%.2f", centerX)))") }
 
     let posQuality: QualityLevel = issues.isEmpty ? .good : (issues.count == 1 ? .fair : .poor)
     let posFeedback = issues.isEmpty ? "Good position" : issues.joined(separator: " · ")
 
-    // Orientation detection
+    // Orientation detection (matches PoseDetector.detectOrientation)
     let nose = try? observation.recognizedPoint(.nose)
     let leftEar = try? observation.recognizedPoint(.leftEar)
     let rightEar = try? observation.recognizedPoint(.rightEar)
     let leftShoulder = try? observation.recognizedPoint(.leftShoulder)
     let rightShoulder = try? observation.recognizedPoint(.rightShoulder)
+    let leftHip = try? observation.recognizedPoint(.leftHip)
+    let rightHip = try? observation.recognizedPoint(.rightHip)
 
     let noseConf = nose?.confidence ?? 0
     let leftEarConf = leftEar?.confidence ?? 0
     let rightEarConf = rightEar?.confidence ?? 0
     let leftShoulderConf = leftShoulder?.confidence ?? 0
     let rightShoulderConf = rightShoulder?.confidence ?? 0
+    let leftHipConf = leftHip?.confidence ?? 0
+    let rightHipConf = rightHip?.confidence ?? 0
 
     let shoulderWidth: CGFloat = {
         guard leftShoulderConf > 0.3, rightShoulderConf > 0.3,
@@ -265,15 +288,29 @@ func analyzePose(cgImage: CGImage) -> PoseReport {
         return abs(ls.location.x - rs.location.x)
     }()
 
+    let hipWidth: CGFloat = {
+        guard leftHipConf > 0.3, rightHipConf > 0.3,
+              let lh = leftHip, let rh = rightHip else { return 0 }
+        return abs(lh.location.x - rh.location.x)
+    }()
+
+    let earAsymmetry = abs(leftEarConf - rightEarConf)
+
     let orientation: Pose?
     if noseConf < 0.1 {
         orientation = .back
-    } else if abs(leftEarConf - rightEarConf) > 0.3 && shoulderWidth < 0.15 {
+    } else if earAsymmetry > 0.3 && shoulderWidth > 0 && shoulderWidth < 0.20 {
+        orientation = .side
+    } else if shoulderWidth > 0 && shoulderWidth < 0.20 && hipWidth > 0 && hipWidth < 0.12 {
         orientation = .side
     } else if (leftShoulderConf > 0.3) != (rightShoulderConf > 0.3) {
         orientation = .side
-    } else if noseConf > 0.3 && shoulderWidth > 0.12 {
+    } else if noseConf > 0.15 && shoulderWidth > 0.10 {
         orientation = .front
+    } else if noseConf > 0.15 && hipWidth > 0.10 {
+        orientation = .front
+    } else if noseConf >= 0.1 {
+        orientation = .front  // low-light fallback
     } else {
         orientation = nil
     }
