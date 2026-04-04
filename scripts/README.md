@@ -16,7 +16,7 @@ swift scripts/analyze-photo.swift scripts/test-images/front_directional_good.jpg
 
 ## Test Images
 
-16 Unsplash images of **standing persons** covering three poses and the full lighting spectrum. All images represent the actual Proof use case — a person standing upright, approximately full-body visible, in conditions a coaching client would encounter at home or in a gym.
+11 Unsplash images of **standing persons** covering three poses and the full lighting spectrum. Most images represent the actual Proof use case — a person standing upright in conditions a coaching client would encounter at home or in a gym. Two edge-case images (`front_window_poor`, `back_studio_good`) use tighter framing to test failure modes.
 
 ### Naming Convention
 
@@ -33,19 +33,14 @@ swift scripts/analyze-photo.swift scripts/test-images/front_directional_good.jpg
 | Image | Pose | Human Assessment | Analyzer Lighting | Analyzer Pose | Notes |
 |-------|------|-----------------|-------------------|---------------|-------|
 | `front_directional_good.jpg` | front | GOOD — directional teal light | GOOD — directional | front, 8 joints | Standing, full body, arms at sides |
-| `front_even_good.jpg` | front | GOOD — even studio light | POOR — backlit | front, 8 joints | White background triggers backlit detection |
-| `front_natural_good.jpg` | front | GOOD — natural outdoor light | POOR — backlit | front, 8 joints | Bright tree canopy triggers backlit |
-| `front_flat_fair.jpg` | front | FAIR — flat gym fluorescent | POOR — backlit | front, 8 joints | Bright gym equipment behind person |
-| `front_overhead_poor.jpg` | front | POOR — single overhead in dark room | GOOD — directional | unknown, 6 joints | Dark but high shadow contrast scores well |
+| `front_mirror_fair.jpg` | front | FAIR — gym mirror, overhead light | GOOD — overhead | front, 6 joints | Mirror selfie scenario |
 | `front_dim_poor.jpg` | front | POOR — very dark gym, overhead spots | GOOD — great shadows | front, 8 joints | Strong downlight gradient scores well |
 | `front_backlit_poor.jpg` | front | POOR — silhouette against bright sky | POOR — too dark | back, 7 joints | Person is near-black silhouette |
-| `front_mirror_fair.jpg` | front | FAIR — gym mirror, overhead light | GOOD — overhead | front, 6 joints | Shows mirror selfie scenario |
-| `front_window_poor.jpg` | front | POOR — silhouette against window | POOR — too dark | unknown, 0 joints | True backlit-window scenario, person is pure silhouette |
+| `front_window_poor.jpg` | front | POOR — silhouette against window | POOR — too dark | unknown, 0 joints | True backlit-window edge case; pure silhouette, body detection fails |
 | `side_stage_good.jpg` | side | GOOD — stage directional | GOOD — overhead | side, 7 joints | Bodybuilding side pose, full body |
 | `side_gym_fair.jpg` | side | FAIR — dark gym with overhead tracks | GOOD — great shadows | back, 7 joints | Person holding weight plate |
 | `side_mirror_fair.jpg` | side | FAIR — gym mirror, flat light | FAIR — flat | side, 5 joints | Mirror selfie, side orientation |
-| `back_natural_good.jpg` | back | GOOD — bright indoor, overhead light | GOOD — great shadows | back, 3 joints | Casual back view, hands in pockets |
-| `back_studio_good.jpg` | back | GOOD — studio light, white background | POOR — backlit | back, 3 joints | White background triggers backlit detection |
+| `back_studio_good.jpg` | back | GOOD — studio light, white background | POOR — backlit | back, 3 joints | Upper-body back muscles; white bg triggers backlit detection |
 | `back_gym_poor.jpg` | back | POOR — dark gym, minimal light | FAIR — flat | back, 7 joints | Back double bicep, full body |
 | `back_backlit_poor.jpg` | back | POOR — strong backlight from sky | POOR — backlit | front, 4 joints | True backlit detection confirmed |
 
@@ -53,24 +48,24 @@ swift scripts/analyze-photo.swift scripts/test-images/front_directional_good.jpg
 
 | Category | Count | Images |
 |----------|-------|--------|
-| Front pose | 9 | `front_*` |
+| Front pose | 5 | `front_*` |
 | Side pose | 3 | `side_*` |
-| Back pose | 4 | `back_*` |
-| Backlit scenario | 4 | `front_backlit_poor`, `front_window_poor`, `front_even_good`, `back_backlit_poor` |
+| Back pose | 3 | `back_*` |
+| Backlit scenario | 3 | `front_backlit_poor`, `front_window_poor`, `back_backlit_poor` |
 | Backlit-window | 1 | `front_window_poor` |
 | Mirror selfie | 2 | `front_mirror_fair`, `side_mirror_fair` |
-| GOOD lighting (human) | 6 | `front_directional_good`, `front_even_good`, `front_natural_good`, `side_stage_good`, `back_natural_good`, `back_studio_good` |
-| FAIR lighting (human) | 4 | `front_flat_fair`, `front_mirror_fair`, `side_gym_fair`, `side_mirror_fair` |
-| POOR lighting (human) | 6 | `front_overhead_poor`, `front_dim_poor`, `front_backlit_poor`, `front_window_poor`, `back_gym_poor`, `back_backlit_poor` |
+| GOOD lighting (human) | 3 | `front_directional_good`, `side_stage_good`, `back_studio_good` |
+| FAIR lighting (human) | 3 | `front_mirror_fair`, `side_gym_fair`, `side_mirror_fair` |
+| POOR lighting (human) | 5 | `front_dim_poor`, `front_backlit_poor`, `front_window_poor`, `back_gym_poor`, `back_backlit_poor` |
 
 ### Known Discrepancies
 
 The "Human Assessment" and "Analyzer Lighting" columns intentionally differ in several cases. These discrepancies reveal where the algorithm's perception diverges from human judgment:
 
-1. **White/bright backgrounds score as backlit** — `front_even_good`, `front_natural_good`, `front_flat_fair`, `back_studio_good` all have bright backgrounds that trigger backlighting detection even though the person is well-lit. This is a known limitation.
-2. **Dark images with good shadow contrast score as GOOD** — `front_overhead_poor` and `front_dim_poor` look very dark to a human, but have strong directional shadow patterns that the algorithm values. The algorithm prioritizes shadow definition over absolute brightness.
+1. **White/bright backgrounds score as backlit** — `back_studio_good` has a bright white background that triggers backlighting detection even though the person is well-lit. This is a known limitation of the background-vs-person brightness comparison.
+2. **Dark images with good shadow contrast score as GOOD** — `front_dim_poor` looks very dark to a human, but has strong directional shadow patterns that the algorithm values. The algorithm prioritizes shadow definition over absolute brightness.
 3. **True backlighting is correctly detected** — `back_backlit_poor`, `front_backlit_poor`, and `front_window_poor` correctly flag strong backlight or extreme darkness from backlighting.
-4. **Window backlighting produces zero-joint detection** — `front_window_poor` is a true backlit-window scenario where the person is a pure silhouette. Vision framework cannot detect any body landmarks, confirming that window backlighting is the worst-case scenario for the pipeline.
+4. **Window backlighting produces zero-joint detection** — `front_window_poor` is a true backlit-window edge case where the person is a pure silhouette. Vision framework cannot detect any body landmarks (0/8 joints), confirming that window backlighting is the worst-case scenario for the pipeline. This image intentionally tests the failure mode, not the happy path.
 
 These mismatches are intentional test data — they define the baseline for tuning heuristic thresholds in later work.
 
