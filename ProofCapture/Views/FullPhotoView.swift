@@ -15,7 +15,7 @@ struct FullPhotoView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            ProofTheme.background.ignoresSafeArea()
 
             Image(uiImage: image)
                 .resizable()
