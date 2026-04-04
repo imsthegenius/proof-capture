@@ -1,6 +1,7 @@
 import AVFoundation
 
-/// Pre-recorded voice clip identifiers. Each case maps 1:1 to a bundled .m4a file.
+/// Pre-recorded voice clip identifiers. Each case maps to a bundled .m4a file,
+/// with male (default) and female variants selected by user preference.
 enum VoiceClip: String, CaseIterable {
     // Pose prompts
     case poseFront = "pose_front"
@@ -28,7 +29,11 @@ enum VoiceClip: String, CaseIterable {
     // Session
     case sessionComplete = "session_complete"
 
-    var filename: String { rawValue }
+    /// Returns the filename for the selected gender.
+    /// Male (0/default) uses the base name, female (1) uses the f_ prefix.
+    func filename(forGender genderRaw: Int) -> String {
+        genderRaw == 1 ? "f_\(rawValue)" : rawValue
+    }
 }
 
 /// Plays bundled .m4a voice guidance clips with zero latency.
@@ -39,11 +44,14 @@ final class VoicePlayer: NSObject, AVAudioPlayerDelegate {
     private var player: AVAudioPlayer?
     private var playbackContinuation: CheckedContinuation<Void, Never>?
 
-    /// Plays a clip and suspends until playback finishes.
+    /// Plays a clip for the user's selected guide voice gender and suspends until done.
     func play(_ clip: VoiceClip) async {
         stop()
 
-        guard let url = Bundle.main.url(forResource: clip.filename, withExtension: "m4a") else {
+        let genderRaw = UserDefaults.standard.integer(forKey: "userGender")
+        let name = clip.filename(forGender: genderRaw)
+
+        guard let url = Bundle.main.url(forResource: name, withExtension: "m4a") else {
             return
         }
 
