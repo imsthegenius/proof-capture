@@ -1,4 +1,5 @@
 import AVFoundation
+import os
 
 /// Pre-recorded voice clip identifiers. Each case maps to a bundled .m4a file,
 /// with male (default) and female variants selected by user preference.
@@ -36,72 +37,59 @@ enum VoiceClip: String, CaseIterable {
     }
 }
 
+private let audioLog = Logger(subsystem: "com.proof.capture", category: "VoicePlayer")
+
 /// Plays bundled .m4a voice guidance clips with zero latency.
 /// Designed to coexist with AVCaptureSession's audio session.
-@MainActor
-final class VoicePlayer: NSObject, AVAudioPlayerDelegate {
+actor VoicePlayer {
 
     private var player: AVAudioPlayer?
-    private var playbackContinuation: CheckedContinuation<Void, Never>?
 
     /// Plays a clip for the user's selected guide voice gender and suspends until done.
     func play(_ clip: VoiceClip) async {
         stop()
 
-        let genderRaw = UserDefaults.standard.integer(forKey: "userGender")
+        let genderRaw = await MainActor.run {
+            UserDefaults.standard.integer(forKey: "userGender")
+        }
         let name = clip.filename(forGender: genderRaw)
 
         guard let url = Bundle.main.url(forResource: name, withExtension: "m4a") else {
+            audioLog.warning("Missing audio clip: \(name).m4a")
             return
         }
 
         guard let audioPlayer = try? AVAudioPlayer(contentsOf: url) else {
+            audioLog.error("Failed to create AVAudioPlayer for \(name).m4a")
             return
         }
 
-        configureAudioSession()
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
+            try session.setActive(true)
+        } catch {
+            audioLog.error("AVAudioSession configuration failed: \(error.localizedDescription)")
+            return
+        }
 
-        audioPlayer.delegate = self
         audioPlayer.prepareToPlay()
         player = audioPlayer
+        audioPlayer.play()
 
-        await withCheckedContinuation { continuation in
-            playbackContinuation = continuation
-            audioPlayer.play()
+        // Wait for the clip to finish. Duration-based sleep is reliable
+        // for short, fixed-length clips where delegate wiring across
+        // actor isolation would add unnecessary complexity.
+        if audioPlayer.duration > 0 {
+            try? await Task.sleep(for: .seconds(audioPlayer.duration + 0.05))
         }
+
+        player = nil
     }
 
-    /// Stops current playback immediately and resumes any waiting caller.
+    /// Stops current playback immediately.
     func stop() {
         player?.stop()
         player = nil
-        playbackContinuation?.resume()
-        playbackContinuation = nil
-    }
-
-    // MARK: - Audio Session
-
-    private func configureAudioSession() {
-        let session = AVAudioSession.sharedInstance()
-        // .playback + .duckOthers lets guidance play over background music
-        // without interrupting the camera's audio session.
-        try? session.setCategory(.playback, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
-        try? session.setActive(true)
-    }
-
-    // MARK: - AVAudioPlayerDelegate
-
-    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        MainActor.assumeIsolated {
-            playbackContinuation?.resume()
-            playbackContinuation = nil
-        }
-    }
-
-    nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: (any Error)?) {
-        MainActor.assumeIsolated {
-            playbackContinuation?.resume()
-            playbackContinuation = nil
-        }
     }
 }

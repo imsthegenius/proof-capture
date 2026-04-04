@@ -58,7 +58,6 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
             if let clip = orientationClip(target: targetPose, detected: detected) {
                 await voicePlayer.play(clip)
             } else {
-                // Dynamic fallback for unexpected orientation combos
                 await speakWithSynthesizer(
                     "Adjust your position for the \(targetPose.title.lowercased()) pose."
                 )
@@ -92,7 +91,6 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
         case (.side, .back):
             await voicePlayer.play(.transitionSideToBack)
         default:
-            // Dynamic fallback for unexpected transition combos
             await speakWithSynthesizer("Next pose. Show your \(to.title.lowercased()) pose.")
         }
     }
@@ -110,7 +108,7 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
 
     /// Stops any current speech or playback immediately.
     func stop() {
-        voicePlayer.stop()
+        Task { await voicePlayer.stop() }
         synthesizer.stopSpeaking(at: .immediate)
         speechContinuation?.resume()
         speechContinuation = nil
@@ -118,7 +116,6 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
 
     // MARK: - Clip Matching
 
-    /// Maps the pose audio prompt text to a bundled clip.
     private func clipForText(_ text: String) -> VoiceClip? {
         switch text {
         case Pose.front.audioPrompt: return .poseFront
