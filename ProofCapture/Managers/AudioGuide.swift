@@ -10,40 +10,35 @@ enum GuidanceMode: Int {
 @MainActor
 final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
 
-    private let synthesizer = AVSpeechSynthesizer()
+    private let voicePlayer = VoicePlayer()
+
+    // Narrow fallback for dynamic strings with no matching clip.
+    private lazy var synthesizer: AVSpeechSynthesizer = {
+        let s = AVSpeechSynthesizer()
+        s.delegate = self
+        return s
+    }()
     private var speechContinuation: CheckedContinuation<Void, Never>?
 
     var mode: GuidanceMode {
         GuidanceMode(rawValue: UserDefaults.standard.integer(forKey: "guidanceMode")) ?? .voice
     }
 
-    override init() {
-        super.init()
-        synthesizer.delegate = self
-    }
-
     // MARK: - Public API
 
-    /// Speaks text aloud and waits for completion. No-op in text mode.
+    /// Speaks text aloud using a bundled clip if available, falling back to TTS.
+    /// No-op in text mode.
     func speak(_ text: String) async {
         guard mode == .voice else { return }
 
-        synthesizer.stopSpeaking(at: .immediate)
-
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.rate = 0.46
-        utterance.pitchMultiplier = 1.0
-        utterance.preUtteranceDelay = 0.1
-
-        utterance.voice = preferredVoice()
-
-        await withCheckedContinuation { continuation in
-            speechContinuation = continuation
-            synthesizer.speak(utterance)
+        if let clip = clipForText(text) {
+            await voicePlayer.play(clip)
+        } else {
+            await speakWithSynthesizer(text)
         }
     }
 
-    /// Speaks positioning guidance based on current issues. Returns immediately if nothing to say.
+    /// Speaks positioning guidance based on current issues.
     func speakPositionGuidance(
         bodyDetected: Bool,
         positionQuality: QualityLevel,
@@ -54,118 +49,112 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
     ) async {
         guard mode == .voice else { return }
 
-        // Priority 1: No body detected
         if !bodyDetected {
-            await speak("Step into the frame so I can see you.")
+            await voicePlayer.play(.guidanceNoBody)
             return
         }
 
-        // Priority 2: Wrong orientation
         if !poseMatches, let detected = detectedOrientation {
-            let guidance = orientationGuidance(target: targetPose, detected: detected)
-            await speak(guidance)
+            if let clip = orientationClip(target: targetPose, detected: detected) {
+                await voicePlayer.play(clip)
+            } else {
+                // Dynamic fallback for unexpected orientation combos
+                await speakWithSynthesizer(
+                    "Adjust your position for the \(targetPose.title.lowercased()) pose."
+                )
+            }
             return
         }
 
-        // Priority 3: Arms not relaxed
         if !armsRelaxed {
-            await speak("Relax your arms at your sides.")
+            await voicePlayer.play(.guidanceArms)
             return
         }
 
-        // Priority 4: Position issues (too close/far/off-center)
         if positionQuality == .poor {
-            // The PoseDetector already provides specific feedback text,
-            // but we provide audio for the most common issues
-            await speak("Adjust your position. Check the screen for guidance.")
+            await voicePlayer.play(.guidanceAdjustPosition)
             return
         }
     }
 
-    private func orientationGuidance(target: Pose, detected: Pose) -> String {
-        switch (target, detected) {
-        case (.front, .side):
-            return "Turn to face the camera straight on."
-        case (.front, .back):
-            return "You're facing away. Turn around to face the camera."
-        case (.side, .front):
-            return "Turn to your left side. Show your profile to the camera."
-        case (.side, .back):
-            return "Turn a bit more. Show your left side to the camera."
-        case (.back, .front):
-            return "Turn away from the camera. Face the wall behind you."
-        case (.back, .side):
-            return "Turn a bit more. Face completely away from the camera."
-        default:
-            return "Adjust your position for the \(target.title.lowercased()) pose."
-        }
-    }
-
-    /// Plays a single countdown cue. The caller owns the visual countdown and timing
-    /// so audio and UI stay in lockstep.
+    /// Plays a single countdown cue. Unchanged — system sounds are correct here.
     func playCountdownTick(isFinal: Bool) {
-        // Countdown ticks are a safety cue and must still play in text mode.
         let soundID: SystemSoundID = isFinal ? 1117 : 1057
         AudioServicesPlaySystemSound(soundID)
     }
 
     func speakPoseTransition(from: Pose, to: Pose) async {
-        let message: String
+        guard mode == .voice else { return }
 
         switch (from, to) {
         case (.front, .side):
-            message = "Great. Now turn to show your left side."
+            await voicePlayer.play(.transitionFrontToSide)
         case (.side, .back):
-            message = "Good. Now turn to face away from the camera."
+            await voicePlayer.play(.transitionSideToBack)
         default:
-            message = "Next pose. Show your \(to.title.lowercased()) pose."
+            // Dynamic fallback for unexpected transition combos
+            await speakWithSynthesizer("Next pose. Show your \(to.title.lowercased()) pose.")
         }
-
-        await speak(message)
     }
 
     func speakSessionComplete() async {
-        await speak("All three poses captured. You're done.")
+        guard mode == .voice else { return }
+        await voicePlayer.play(.sessionComplete)
     }
 
-    /// Stops any current speech immediately.
+    /// Speaks lighting guidance when flat lighting is detected.
+    func speakLightingGuidance() async {
+        guard mode == .voice else { return }
+        await voicePlayer.play(.guidanceOverhead)
+    }
+
+    /// Stops any current speech or playback immediately.
     func stop() {
+        voicePlayer.stop()
         synthesizer.stopSpeaking(at: .immediate)
-        // Resume any waiting continuation so callers don't hang
         speechContinuation?.resume()
         speechContinuation = nil
     }
 
-    // MARK: - Voice Selection
+    // MARK: - Clip Matching
 
-    private func preferredVoice() -> AVSpeechSynthesisVoice? {
-        let genderRaw = UserDefaults.standard.integer(forKey: "userGender")
-
-        // Voice preference cascade: premium > enhanced > compact
-        let identifiers: [String] = if genderRaw == 1 {
-            // Female
-            [
-                "com.apple.voice.premium.en-GB.Serena",
-                "com.apple.voice.enhanced.en-GB.Stephanie",
-                "com.apple.voice.compact.en-GB.Stephanie",
-            ]
-        } else {
-            // Male (default)
-            [
-                "com.apple.voice.premium.en-GB.Malcolm",
-                "com.apple.voice.enhanced.en-GB.Daniel",
-                "com.apple.voice.compact.en-GB.Daniel",
-            ]
+    /// Maps the pose audio prompt text to a bundled clip.
+    private func clipForText(_ text: String) -> VoiceClip? {
+        switch text {
+        case Pose.front.audioPrompt: return .poseFront
+        case Pose.side.audioPrompt:  return .poseSide
+        case Pose.back.audioPrompt:  return .poseBack
+        default:                     return nil
         }
+    }
 
-        for identifier in identifiers {
-            if let voice = AVSpeechSynthesisVoice(identifier: identifier) {
-                return voice
-            }
+    private func orientationClip(target: Pose, detected: Pose) -> VoiceClip? {
+        switch (target, detected) {
+        case (.front, .side):  return .orientFrontFromSide
+        case (.front, .back):  return .orientFrontFromBack
+        case (.side, .front):  return .orientSideFromFront
+        case (.side, .back):   return .orientSideFromBack
+        case (.back, .front):  return .orientBackFromFront
+        case (.back, .side):   return .orientBackFromSide
+        default:               return nil
         }
+    }
 
-        // Final fallback
-        return AVSpeechSynthesisVoice(language: "en-GB")
+    // MARK: - AVSpeechSynthesizer Fallback
+
+    private func speakWithSynthesizer(_ text: String) async {
+        synthesizer.stopSpeaking(at: .immediate)
+
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.rate = 0.46
+        utterance.pitchMultiplier = 1.0
+        utterance.preUtteranceDelay = 0.1
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-GB")
+
+        await withCheckedContinuation { continuation in
+            speechContinuation = continuation
+            synthesizer.speak(utterance)
+        }
     }
 
     // MARK: - AVSpeechSynthesizerDelegate
