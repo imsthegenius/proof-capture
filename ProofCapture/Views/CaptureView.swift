@@ -251,7 +251,7 @@ private struct GlassCircle: ViewModifier {
             content.glassEffect(.regular, in: .circle)
         } else {
             content
-                .background(Color.black.opacity(0.5))
+                .background(ProofTheme.overlayScrim)
                 .clipShape(Circle())
         }
     }
