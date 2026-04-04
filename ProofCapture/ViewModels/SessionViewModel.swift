@@ -17,6 +17,7 @@ final class SessionViewModel {
     var currentPose: Pose = .front
     var phase: SessionPhase = .positioning
     var capturedImages: [Pose: UIImage] = [:]
+    var qualityReports: [Pose: PhotoQualityGate.Report] = [:]
     var countdownValue: Int = 5
     var showAbortConfirmation = false
     var retakePose: Pose?
@@ -211,17 +212,24 @@ final class SessionViewModel {
         let flashTask = Task { await triggerCaptureFlash() }
 
         let burst = await cameraManager.captureBurst(count: 7)
-        if let best = BurstSelector.selectBest(from: burst, pose: currentPose) {
-            capturedImages[currentPose] = best
+        let pose = currentPose
+        if let best = await BurstSelector.selectBest(from: burst, pose: pose) {
+            capturedImages[pose] = best
         } else if let first = burst.first {
-            capturedImages[currentPose] = first
+            capturedImages[pose] = first
         }
 
         await flashTask.value
 
-        guard capturedImages[currentPose] != nil else {
+        guard let savedImage = capturedImages[pose] else {
             phase = .positioning
             return
+        }
+
+        // Run quality gate in background — does not block preview
+        Task {
+            let report = await PhotoQualityGate.assess(image: savedImage, pose: pose)
+            self.qualityReports[pose] = report
         }
 
         let resumePose = allRequiredPhotosCaptured ? currentPose : (currentPose.next ?? currentPose)
@@ -307,6 +315,7 @@ final class SessionViewModel {
         isRetaking = true
         showCompleteContent = false
         capturedImages[pose] = nil
+        qualityReports[pose] = nil
         currentPose = pose
         poseDetector.targetPose = pose
         phase = .positioning

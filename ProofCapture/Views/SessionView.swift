@@ -324,11 +324,59 @@ struct SessionView: View {
             .offset(y: viewModel.showCompleteContent ? 0 : 18)
             .animation(.easeOut(duration: 0.45).delay(0.08), value: viewModel.showCompleteContent)
 
+            if viewModel.showCompleteContent, !qualityWarningIssues.isEmpty {
+                qualityWarningView
+                    .padding(.horizontal, ProofTheme.spacingMD)
+                    .padding(.top, ProofTheme.spacingSM)
+                    .transition(.opacity)
+            }
+
             Spacer()
         }
         .padding(.horizontal, ProofTheme.spacingMD)
         .padding(.top, ProofTheme.spacingXL)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var qualityWarningIssues: [(Pose, String)] {
+        Pose.allCases.flatMap { pose in
+            (viewModel.qualityReports[pose]?.issues ?? []).map { (pose, $0) }
+        }
+    }
+
+    private var qualityWarningView: some View {
+        VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
+            HStack(spacing: ProofTheme.spacingSM) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 14, weight: .light))
+                    .foregroundStyle(ProofTheme.statusFair)
+
+                Text("Some photos may be hard to compare")
+                    .font(.system(size: 13, weight: .light))
+                    .foregroundStyle(ProofTheme.textPrimary)
+            }
+
+            ForEach(qualityWarningIssues, id: \.1) { pose, issue in
+                HStack(spacing: ProofTheme.spacingSM) {
+                    Text("\(pose.title):")
+                        .font(.system(size: 12, weight: .light))
+                        .foregroundStyle(ProofTheme.textSecondary)
+
+                    Text(issue)
+                        .font(.system(size: 12, weight: .light))
+                        .foregroundStyle(ProofTheme.statusFair)
+                }
+            }
+        }
+        .padding(ProofTheme.spacingMD)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ProofTheme.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
+                .stroke(ProofTheme.statusFair.opacity(0.3), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
+        .accessibilityLabel("Quality warning: some photos may be difficult to compare")
     }
 
     // MARK: - Bottom Controls
