@@ -59,8 +59,11 @@ actor VoicePlayer {
             return
         }
 
-        guard let audioPlayer = try? AVAudioPlayer(contentsOf: url) else {
-            audioLog.error("Failed to create AVAudioPlayer for \(name).m4a")
+        let audioPlayer: AVAudioPlayer
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+        } catch {
+            audioLog.error("Failed to create AVAudioPlayer for \(name).m4a: \(error.localizedDescription)")
             return
         }
 
@@ -75,7 +78,12 @@ actor VoicePlayer {
 
         audioPlayer.prepareToPlay()
         player = audioPlayer
-        audioPlayer.play()
+
+        guard audioPlayer.play() else {
+            audioLog.error("AVAudioPlayer.play() returned false for \(name).m4a")
+            player = nil
+            return
+        }
 
         // Wait for the clip to finish. Duration-based sleep is reliable
         // for short, fixed-length clips where delegate wiring across
