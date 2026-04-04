@@ -47,7 +47,7 @@ struct AuthView: View {
                     Task { await authManager.handleAppleSignIn(result: result) }
                 }
                 .signInWithAppleButtonStyle(.white)
-                .frame(height: 48)
+                .frame(height: 52)
                 .clipShape(.capsule)
                 .accessibilityLabel("Sign in with Apple")
 

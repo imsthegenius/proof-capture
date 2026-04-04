@@ -56,23 +56,36 @@ struct HomeView: View {
             } else if let last = lastSession {
                 lastSessionCard(for: last)
             } else {
-                VStack(spacing: ProofTheme.spacingSM) {
-                    Image(systemName: "iphone.rear.camera")
-                        .font(.system(size: 34, weight: .ultraLight))
-                        .foregroundStyle(ProofTheme.textTertiary)
-                        .accessibilityHidden(true)
-                    Text("Prop your phone up")
-                        .proofFont(17, weight: .light, relativeTo: .body)
-                        .foregroundStyle(ProofTheme.textSecondary)
-                    Text("5\u{2013}6 feet away, waist height")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
-                    Text("Overhead light for best results")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                VStack(spacing: ProofTheme.spacingLG) {
+                    VStack(spacing: ProofTheme.spacingSM) {
+                        Image(systemName: "iphone.rear.camera")
+                            .font(.system(size: 34, weight: .ultraLight))
+                            .foregroundStyle(ProofTheme.textTertiary)
+                            .accessibilityHidden(true)
+                        Text("Prop your phone up")
+                            .proofFont(17, weight: .light, relativeTo: .body)
+                            .foregroundStyle(ProofTheme.textSecondary)
+                        Text("5\u{2013}6 feet away, waist height")
+                            .proofFont(13, weight: .light, relativeTo: .footnote)
+                            .foregroundStyle(ProofTheme.textTertiary)
+                        Text("Overhead light for best results")
+                            .proofFont(13, weight: .light, relativeTo: .footnote)
+                            .foregroundStyle(ProofTheme.textTertiary)
+                    }
+
+                    NavigationLink(destination: SessionView()) {
+                        Text("Start your first session")
+                            .proofFont(15, weight: .light, relativeTo: .body)
+                            .foregroundStyle(ProofTheme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(ProofTheme.surface)
+                            .clipShape(.capsule)
+                    }
+                    .padding(.horizontal, ProofTheme.spacingXL)
+                    .accessibilityLabel("Start your first photo session")
                 }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Setup tip: Prop your phone up, 5 to 6 feet away at waist height, with overhead light for best results")
+                .accessibilityElement(children: .contain)
             }
 
             Spacer()
@@ -155,7 +168,7 @@ struct HomeView: View {
             HStack(spacing: ProofTheme.spacingMD) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(sessions.count)")
-                        .proofFont(34, weight: .ultraLight, relativeTo: .largeTitle)
+                        .proofFont(48, weight: .ultraLight, relativeTo: .largeTitle)
                         .foregroundStyle(ProofTheme.accent)
                         .contentTransition(.numericText())
                         .animation(.easeInOut, value: sessions.count)
