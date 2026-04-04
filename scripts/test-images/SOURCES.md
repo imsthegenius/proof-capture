@@ -17,10 +17,14 @@ All images sourced from [Unsplash](https://unsplash.com) under the [Unsplash Lic
 | `side_stage_good.jpg` | `photo-1585258074413` | Side physique pose on stage |
 | `side_gym_fair.jpg` | (retained from v1) | Man standing side view, dark gym |
 | `side_mirror_fair.jpg` | `photo-1744551358229` | Man taking mirror selfie, side view |
+| `back_natural_good.jpg` | `photo-1576417677416` | Man from behind, hands in pockets, bright indoor |
+| `back_studio_good.jpg` | `photo-1563427632003` | Back muscles pose, white studio background |
 | `back_gym_poor.jpg` | `photo-1656785280286` | Back double bicep pose in gym |
 | `back_backlit_poor.jpg` | (retained from v1) | Person from behind, strong backlight |
+| `front_window_poor.jpg` | `photo-1616386415069` | Person silhouetted against window panes |
 
 ## Version History
 
+- **v2.1 (2026-04-04)**: Added 3 images to fix pose distribution (back poses 2→4) and add true backlit-window scenario. Now 16 images total.
 - **v2 (2026-04-04)**: Replaced gym action shots with standing progress photo representatives. Added `{pose}_{lighting}_{quality}` naming convention. 11 new images, 2 retained from v1.
 - **v1**: 13 images, mostly gym action shots (deadlifts, push-ups, dumbbell curls). Did not represent the Proof Capture use case.
