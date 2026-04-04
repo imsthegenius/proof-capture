@@ -153,8 +153,8 @@ Swiss typography pattern — large accent numeral ("0") + one-line explanation +
 ## Supabase
 - Project: `pbntloqfayegjamsvmpy` (eu-west-2)
 - URL: `https://pbntloqfayegjamsvmpy.supabase.co`
-- Config via `BuildConfig.xcconfig` (checked in, placeholder values) + `Supabase.xcconfig` (gitignored, real values)
-- `BuildConfig.xcconfig` uses `#include?` to load `Supabase.xcconfig` when present; first definition wins
+- Config via `BuildConfig.xcconfig` (checked in) which includes `Supabase.xcconfig.example` (placeholders) then optionally `Supabase.xcconfig` (gitignored, real values)
+- Later includes override earlier ones, so real credentials in `Supabase.xcconfig` win over placeholders
 - Values injected into Info.plist as `SUPABASE_URL` / `SUPABASE_ANON_KEY`
 - Tables: `photo_sessions` (RLS per user)
 - Storage: `progress-photos` bucket (private, RLS per user folder)

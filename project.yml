@@ -20,8 +20,8 @@ targets:
     type: application
     platform: iOS
     configFiles:
-      Debug: Supabase.xcconfig
-      Release: Supabase.xcconfig
+      Debug: BuildConfig.xcconfig
+      Release: BuildConfig.xcconfig
     sources:
       - path: ProofCapture
     dependencies:
