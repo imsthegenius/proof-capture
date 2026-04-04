@@ -40,6 +40,7 @@
 		F1FBD044FA82C5F5F242C14A /* LightingAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 819571813DFCC5178ED2A171 /* LightingAnalyzer.swift */; };
 		F74A52A301CFEE2C837DA1EE /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41ADDCFB0E0EF008251FA1A2 /* SupabaseClient.swift */; };
 		FA6544E66117DAF4B988E039 /* PermissionStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCA47A9DAC3EEBC632811F3 /* PermissionStep.swift */; };
+		FB1A3C4E9D7E82A1C5B04D67 /* PhotoQualityGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8F1A2B7C4D56E9A0123456 /* PhotoQualityGate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -78,6 +79,7 @@
 		D576AAEE18DCE3DA341D1F90 /* SessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionView.swift; sourceTree = "<group>"; };
 		E0BD8FF3B82212E1276657FA /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		EF9F7E3F242518734ECAE7EE /* SetupGuideStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideStep.swift; sourceTree = "<group>"; };
+		3E8F1A2B7C4D56E9A0123456 /* PhotoQualityGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoQualityGate.swift; sourceTree = "<group>"; };
 		"TEMP_5B22DEC2-0B00-451A-8E4D-C4E4333F1C75" /* BuildConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildConfig.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -97,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				E0BD8FF3B82212E1276657FA /* AuthManager.swift */,
+				3E8F1A2B7C4D56E9A0123456 /* PhotoQualityGate.swift */,
 				41ADDCFB0E0EF008251FA1A2 /* SupabaseClient.swift */,
 				68A427F3031BBD88A31E8F38 /* SyncManager.swift */,
 			);
@@ -289,6 +292,7 @@
 				F1FBD044FA82C5F5F242C14A /* LightingAnalyzer.swift in Sources */,
 				6FEA4C6A8C0344202A40AB1B /* OnboardingView.swift in Sources */,
 				FA6544E66117DAF4B988E039 /* PermissionStep.swift in Sources */,
+				FB1A3C4E9D7E82A1C5B04D67 /* PhotoQualityGate.swift in Sources */,
 				B7BA5AD9FBDFBCBD0763AACB /* PhotoSession.swift in Sources */,
 				0E306A9AEF53F0A30C380107 /* Pose.swift in Sources */,
 				D8969189FCAB524CA6402B07 /* PoseDetector.swift in Sources */,

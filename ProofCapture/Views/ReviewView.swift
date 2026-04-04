@@ -6,20 +6,29 @@ struct ReviewView: View {
     @Environment(\.modelContext) private var modelContext
 
     private let poseImages: [Pose: UIImage]
+    private let qualityReports: [Pose: PhotoQualityGate.Report]
     private let session: PhotoSession?
     private let isFromHistory: Bool
+    private let onRetake: ((Pose) -> Void)?
     @State private var isSaving = false
     @State private var savedSuccessfully = false
     @State private var showSaveConfirmation = false
     @State private var showDeleteConfirmation = false
+    @State private var showQualityWarning = false
     @State private var hasAppeared = false
     @State private var savePulse = false
 
     // After capture — no session reference, shows "Session Complete"
-    init(images: [Pose: UIImage]) {
+    init(
+        images: [Pose: UIImage],
+        qualityReports: [Pose: PhotoQualityGate.Report] = [:],
+        onRetake: ((Pose) -> Void)? = nil
+    ) {
         self.poseImages = images
+        self.qualityReports = qualityReports
         self.session = nil
         self.isFromHistory = false
+        self.onRetake = onRetake
     }
 
     // From history — has session reference, shows date and delete option
@@ -31,8 +40,18 @@ struct ReviewView: View {
             }
         }
         self.poseImages = images
+        self.qualityReports = [:]
         self.session = session
         self.isFromHistory = true
+        self.onRetake = nil
+    }
+
+    private var warningIssues: [(id: String, pose: Pose, issue: String)] {
+        Pose.allCases.flatMap { pose in
+            (qualityReports[pose]?.issues ?? []).map {
+                (id: "\(pose.title)-\($0)", pose: pose, issue: $0)
+            }
+        }
     }
 
     private var titleText: String {
@@ -53,6 +72,12 @@ struct ReviewView: View {
                 .opacity(hasAppeared ? 1 : 0)
                 .offset(y: hasAppeared ? 0 : 18)
                 .animation(.easeOut(duration: 0.45).delay(0.08), value: hasAppeared)
+
+            if showQualityWarning, !warningIssues.isEmpty {
+                qualityWarningBanner
+                    .padding(.horizontal, ProofTheme.spacingMD)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
 
             Spacer()
 
@@ -79,6 +104,14 @@ struct ReviewView: View {
             guard !hasAppeared else { return }
             withAnimation(.easeOut(duration: 0.45)) {
                 hasAppeared = true
+            }
+            if !warningIssues.isEmpty {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(600))
+                    withAnimation(.easeOut(duration: 0.35)) {
+                        showQualityWarning = true
+                    }
+                }
             }
         }
     }
@@ -252,6 +285,70 @@ struct ReviewView: View {
         .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .accessibilityLabel("Saved successfully")
+    }
+
+    // MARK: - Quality Warning
+
+    private var qualityWarningBanner: some View {
+        VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
+            HStack(spacing: ProofTheme.spacingSM) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 14, weight: .light))
+                    .foregroundStyle(ProofTheme.statusFair)
+
+                Text("Quality issues detected")
+                    .proofFont(13, weight: .light, relativeTo: .footnote)
+                    .foregroundStyle(ProofTheme.textPrimary)
+
+                Spacer()
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        showQualityWarning = false
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .light))
+                        .foregroundStyle(ProofTheme.textTertiary)
+                        .frame(width: 28, height: 28)
+                }
+                .accessibilityLabel("Dismiss quality warning")
+            }
+
+            ForEach(warningIssues, id: \.id) { item in
+                HStack(spacing: ProofTheme.spacingSM) {
+                    Text("\(item.pose.title):")
+                        .proofFont(12, weight: .light, relativeTo: .caption1)
+                        .foregroundStyle(ProofTheme.textSecondary)
+
+                    Text(item.issue)
+                        .proofFont(12, weight: .light, relativeTo: .caption1)
+                        .foregroundStyle(ProofTheme.statusFair)
+
+                    Spacer()
+
+                    if let onRetake {
+                        Button {
+                            onRetake(item.pose)
+                        } label: {
+                            Text("Retake")
+                                .proofFont(12, weight: .light, relativeTo: .caption1)
+                                .foregroundStyle(ProofTheme.accent)
+                        }
+                        .accessibilityLabel("Retake \(item.pose.title) photo")
+                    }
+                }
+            }
+        }
+        .padding(ProofTheme.spacingMD)
+        .background(ProofTheme.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
+                .stroke(ProofTheme.statusFair.opacity(0.3), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Quality warning: some photos may be difficult to compare")
     }
 
     // MARK: - Actions

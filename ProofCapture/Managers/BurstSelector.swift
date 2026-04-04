@@ -5,28 +5,59 @@ import Vision
 struct BurstSelector {
 
     /// Returns the best image from a burst using composite quality scoring.
-    /// Sharpness dominates for all poses — this is a body photo app.
-    /// Face quality is a minor tiebreaker for front shots only.
-    static func selectBest(from images: [UIImage], pose: Pose = .front) -> UIImage? {
+    ///
+    /// On iOS 18+, integrates `VNCalculateImageAestheticsScoresRequest` for
+    /// scientifically-grounded frame selection (blur, exposure, composition).
+    /// Falls back to sharpness + face quality on iOS 17.
+    ///
+    /// Sharpness remains the primary disqualifier — very blurry frames
+    /// (sharpness < 0.01) are eliminated before aesthetics scoring.
+    static func selectBest(from images: [UIImage], pose: Pose = .front) async -> UIImage? {
         guard !images.isEmpty else { return nil }
         if images.count == 1 { return images.first }
 
+        // Phase 1: compute sharpness for all frames and eliminate the obviously blurry
+        let scored = images.map { image in
+            (image, sharpnessScore(for: image))
+        }
+
+        let minimumSharpness: Float = 0.01
+        let viable = scored.filter { $0.1 >= minimumSharpness }
+        let candidates = viable.isEmpty ? scored : viable
+
+        // Phase 2: score each candidate with the full composite
         var bestImage: UIImage?
         var bestScore: Float = -1
 
-        for image in images {
-            let sharpness = sharpnessScore(for: image)
+        for (image, sharpness) in candidates {
+            let aesthetics = await aestheticsScore(for: image)
             let faceQuality: Float = (pose == .front) ? faceQualityScore(for: image) : 0
 
-            // Body-focused: sharpness is king. Face quality is a minor tiebreaker
-            // for front shots (avoids selecting frames with eyes closed/blurred face)
-            let score: Float = switch pose {
-            case .front:
-                sharpness * 0.75 + faceQuality * 0.25
-            case .side:
-                sharpness * 0.9 + faceQuality * 0.1
-            case .back:
-                sharpness
+            // Disqualify frames Apple's model flags as screenshots/documents
+            if aesthetics.isUtility { continue }
+
+            let hasAesthetics = aesthetics.isAvailable
+
+            // When aesthetics unavailable (iOS 17), preserve original weights
+            let score: Float
+            if hasAesthetics {
+                score = switch pose {
+                case .front:
+                    sharpness * 0.50 + aesthetics.normalized * 0.35 + faceQuality * 0.15
+                case .side:
+                    sharpness * 0.65 + aesthetics.normalized * 0.35
+                case .back:
+                    sharpness * 0.60 + aesthetics.normalized * 0.40
+                }
+            } else {
+                score = switch pose {
+                case .front:
+                    sharpness * 0.75 + faceQuality * 0.25
+                case .side:
+                    sharpness * 0.90 + faceQuality * 0.10
+                case .back:
+                    sharpness
+                }
             }
 
             if score > bestScore {
@@ -35,12 +66,56 @@ struct BurstSelector {
             }
         }
 
-        return bestImage
+        // If every candidate was disqualified (all isUtility), fall back to sharpest
+        return bestImage ?? candidates.max(by: { $0.1 < $1.1 })?.0
+    }
+
+    // MARK: - Aesthetics (iOS 18+ Vision framework)
+
+    private struct AestheticsResult {
+        let normalized: Float
+        let isUtility: Bool
+        let isAvailable: Bool
+
+        static let unavailable = AestheticsResult(normalized: 0, isUtility: false, isAvailable: false)
+    }
+
+    private static func aestheticsScore(for image: UIImage) async -> AestheticsResult {
+        if #available(iOS 18.0, *) {
+            return await aestheticsScoreIOS18(for: image)
+        } else {
+            return .unavailable
+        }
+    }
+
+    @available(iOS 18.0, *)
+    private static func aestheticsScoreIOS18(for image: UIImage) async -> AestheticsResult {
+        guard let cgImage = image.cgImage else { return .unavailable }
+
+        let request = VNCalculateImageAestheticsScoresRequest()
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up)
+
+        do {
+            try handler.perform([request])
+        } catch {
+            return .unavailable
+        }
+
+        guard let result = request.results?.first else {
+            return .unavailable
+        }
+
+        let normalized = (result.overallScore + 1.0) / 2.0
+        return AestheticsResult(
+            normalized: normalized,
+            isUtility: result.isUtility,
+            isAvailable: true
+        )
     }
 
     // MARK: - Sharpness (Laplacian edge detection)
 
-    private static func sharpnessScore(for image: UIImage) -> Float {
+    static func sharpnessScore(for image: UIImage) -> Float {
         guard let ciImage = CIImage(image: image) else { return 0 }
 
         let context = CIContext(options: [.useSoftwareRenderer: false])
@@ -105,7 +180,6 @@ struct BurstSelector {
             return 0
         }
 
-        // Return the quality of the first (best) face detected
         guard let result = request.results?.first,
               let quality = result.faceCaptureQuality else {
             return 0
