@@ -36,13 +36,28 @@ struct BurstSelector {
             // Disqualify frames Apple's model flags as screenshots/documents
             if aesthetics.isUtility { continue }
 
-            let score: Float = switch pose {
-            case .front:
-                sharpness * 0.50 + aesthetics.normalized * 0.35 + faceQuality * 0.15
-            case .side:
-                sharpness * 0.65 + aesthetics.normalized * 0.35
-            case .back:
-                sharpness * 0.60 + aesthetics.normalized * 0.40
+            let hasAesthetics = aesthetics.normalized > 0 || aesthetics.isUtility
+
+            // When aesthetics unavailable (iOS 17), preserve original weights
+            let score: Float
+            if hasAesthetics {
+                score = switch pose {
+                case .front:
+                    sharpness * 0.50 + aesthetics.normalized * 0.35 + faceQuality * 0.15
+                case .side:
+                    sharpness * 0.65 + aesthetics.normalized * 0.35
+                case .back:
+                    sharpness * 0.60 + aesthetics.normalized * 0.40
+                }
+            } else {
+                score = switch pose {
+                case .front:
+                    sharpness * 0.75 + faceQuality * 0.25
+                case .side:
+                    sharpness * 0.90 + faceQuality * 0.10
+                case .back:
+                    sharpness
+                }
             }
 
             if score > bestScore {

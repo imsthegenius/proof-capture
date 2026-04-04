@@ -46,9 +46,11 @@ struct ReviewView: View {
         self.onRetake = nil
     }
 
-    private var warningIssues: [(Pose, String)] {
+    private var warningIssues: [(id: String, pose: Pose, issue: String)] {
         Pose.allCases.flatMap { pose in
-            (qualityReports[pose]?.issues ?? []).map { (pose, $0) }
+            (qualityReports[pose]?.issues ?? []).map {
+                (id: "\(pose.title)-\($0)", pose: pose, issue: $0)
+            }
         }
     }
 
@@ -313,13 +315,13 @@ struct ReviewView: View {
                 .accessibilityLabel("Dismiss quality warning")
             }
 
-            ForEach(warningIssues, id: \.1) { pose, issue in
+            ForEach(warningIssues, id: \.id) { item in
                 HStack(spacing: ProofTheme.spacingSM) {
-                    Text("\(pose.title):")
+                    Text("\(item.pose.title):")
                         .proofFont(12, weight: .light, relativeTo: .caption1)
                         .foregroundStyle(ProofTheme.textSecondary)
 
-                    Text(issue)
+                    Text(item.issue)
                         .proofFont(12, weight: .light, relativeTo: .caption1)
                         .foregroundStyle(ProofTheme.statusFair)
 
@@ -327,13 +329,13 @@ struct ReviewView: View {
 
                     if let onRetake {
                         Button {
-                            onRetake(pose)
+                            onRetake(item.pose)
                         } label: {
                             Text("Retake")
                                 .proofFont(12, weight: .light, relativeTo: .caption1)
                                 .foregroundStyle(ProofTheme.accent)
                         }
-                        .accessibilityLabel("Retake \(pose.title) photo")
+                        .accessibilityLabel("Retake \(item.pose.title) photo")
                     }
                 }
             }

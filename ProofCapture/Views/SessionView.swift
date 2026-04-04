@@ -338,9 +338,11 @@ struct SessionView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var qualityWarningIssues: [(Pose, String)] {
+    private var qualityWarningIssues: [(id: String, pose: Pose, issue: String)] {
         Pose.allCases.flatMap { pose in
-            (viewModel.qualityReports[pose]?.issues ?? []).map { (pose, $0) }
+            (viewModel.qualityReports[pose]?.issues ?? []).map {
+                (id: "\(pose.title)-\($0)", pose: pose, issue: $0)
+            }
         }
     }
 
@@ -356,13 +358,13 @@ struct SessionView: View {
                     .foregroundStyle(ProofTheme.textPrimary)
             }
 
-            ForEach(qualityWarningIssues, id: \.1) { pose, issue in
+            ForEach(qualityWarningIssues, id: \.id) { item in
                 HStack(spacing: ProofTheme.spacingSM) {
-                    Text("\(pose.title):")
+                    Text("\(item.pose.title):")
                         .font(.system(size: 12, weight: .light))
                         .foregroundStyle(ProofTheme.textSecondary)
 
-                    Text(issue)
+                    Text(item.issue)
                         .font(.system(size: 12, weight: .light))
                         .foregroundStyle(ProofTheme.statusFair)
                 }
