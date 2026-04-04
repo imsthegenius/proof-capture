@@ -25,6 +25,8 @@ Standalone iOS app that guides fitness coaching clients through taking consisten
 ```bash
 xcodebuild -project ProofCapture.xcodeproj -scheme ProofCapture -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
 ```
+Works on clean checkout — `BuildConfig.xcconfig` provides placeholder Supabase values.
+For real credentials, run `./scripts/bootstrap.sh` and fill in `Supabase.xcconfig`.
 
 ## Brain Sync
 @~/Desktop/second-brain/ventures/proof/index.md
@@ -151,7 +153,9 @@ Swiss typography pattern — large accent numeral ("0") + one-line explanation +
 ## Supabase
 - Project: `pbntloqfayegjamsvmpy` (eu-west-2)
 - URL: `https://pbntloqfayegjamsvmpy.supabase.co`
-- Config via `Supabase.xcconfig` → injected into Info.plist as `SUPABASE_URL` / `SUPABASE_ANON_KEY`
+- Config via `BuildConfig.xcconfig` (checked in, placeholder values) + `Supabase.xcconfig` (gitignored, real values)
+- `BuildConfig.xcconfig` uses `#include?` to load `Supabase.xcconfig` when present; first definition wins
+- Values injected into Info.plist as `SUPABASE_URL` / `SUPABASE_ANON_KEY`
 - Tables: `photo_sessions` (RLS per user)
 - Storage: `progress-photos` bucket (private, RLS per user folder)
 

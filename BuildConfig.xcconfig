@@ -1,0 +1,9 @@
+// Build Configuration — checked into source control
+// Real Supabase credentials go in Supabase.xcconfig (gitignored)
+// On clean checkout, placeholder values below allow the build to succeed.
+// In xcconfig, the first definition wins — so included values override fallbacks.
+#include? "Supabase.xcconfig"
+
+SUPABASE_URL = https://placeholder.supabase.co
+SUPABASE_ANON_KEY = placeholder-key
+SUPABASE_REDIRECT_URL = com.proof.capture://auth-callback

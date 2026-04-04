@@ -1,4 +1,5 @@
 Supabase.xcconfig
+Supabase.local.xcconfig
 *.xcuserdata
 *.xcuserstate
 xcuserdata/
