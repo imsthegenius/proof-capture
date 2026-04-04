@@ -137,16 +137,45 @@ struct PhotoQualityGate {
         return nil
     }
 
-    // MARK: - Exposure (person brightness via CIAreaAverage)
+    // MARK: - Exposure (person-masked brightness via segmentation + CIAreaAverage)
 
     private static func checkExposure(image: UIImage) async -> String? {
-        guard let ciImage = CIImage(image: image) else { return nil }
-
+        guard let cgImage = image.cgImage else { return nil }
+        let ciImage = CIImage(cgImage: cgImage)
         let extent = ciImage.extent
+
+        // Segment person to measure exposure on the body, not the background
+        let segRequest = VNGeneratePersonSegmentationRequest()
+        segRequest.qualityLevel = .balanced
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up)
+
+        do {
+            try handler.perform([segRequest])
+        } catch {
+            return nil
+        }
+
+        let measureImage: CIImage
+        if let segResult = segRequest.results?.first {
+            let maskImage = CIImage(cvPixelBuffer: segResult.pixelBuffer)
+            let scaledMask = maskImage.transformed(by: CGAffineTransform(
+                scaleX: extent.width / maskImage.extent.width,
+                y: extent.height / maskImage.extent.height
+            ))
+            let black = CIImage(color: .black).cropped(to: extent)
+            measureImage = ciImage.applyingFilter("CIBlendWithMask", parameters: [
+                kCIInputBackgroundImageKey: black,
+                kCIInputMaskImageKey: scaledMask
+            ])
+        } else {
+            // No person detected — fall back to full-frame
+            measureImage = ciImage
+        }
+
         guard let avgFilter = CIFilter(
             name: "CIAreaAverage",
             parameters: [
-                kCIInputImageKey: ciImage,
+                kCIInputImageKey: measureImage,
                 kCIInputExtentKey: CIVector(
                     x: extent.origin.x,
                     y: extent.origin.y,
