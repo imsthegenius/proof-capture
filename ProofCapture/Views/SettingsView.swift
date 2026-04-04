@@ -15,24 +15,51 @@ struct SettingsView: View {
         List {
             // Capture settings
             Section {
-                Picker("Guide voice", selection: $genderRaw) {
-                    Text("Male").tag(0)
-                    Text("Female").tag(1)
+                // Guide voice
+                VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
+                    Text("Guide voice")
+                        .proofFont(13, weight: .light, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.textTertiary)
+
+                    HStack(spacing: ProofTheme.spacingSM) {
+                        settingOption(label: "Male", isSelected: genderRaw == 0) { genderRaw = 0 }
+                        settingOption(label: "Female", isSelected: genderRaw == 1) { genderRaw = 1 }
+                    }
                 }
+                .accessibilityElement(children: .contain)
                 .accessibilityLabel("Voice guide gender")
+                .padding(.vertical, ProofTheme.spacingXS)
 
-                Picker("Guidance mode", selection: $guidanceMode) {
-                    Text("Voice").tag(0)
-                    Text("Text only").tag(1)
+                // Guidance mode
+                VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
+                    Text("Guidance mode")
+                        .proofFont(13, weight: .light, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.textTertiary)
+
+                    HStack(spacing: ProofTheme.spacingSM) {
+                        settingOption(label: "Voice", isSelected: guidanceMode == 0) { guidanceMode = 0 }
+                        settingOption(label: "Text only", isSelected: guidanceMode == 1) { guidanceMode = 1 }
+                    }
                 }
+                .accessibilityElement(children: .contain)
                 .accessibilityLabel("Guidance mode selection")
+                .padding(.vertical, ProofTheme.spacingXS)
 
-                Picker("Countdown", selection: $countdownSeconds) {
-                    Text("3 seconds").tag(3)
-                    Text("5 seconds").tag(5)
-                    Text("10 seconds").tag(10)
+                // Countdown
+                VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
+                    Text("Countdown")
+                        .proofFont(13, weight: .light, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.textTertiary)
+
+                    HStack(spacing: ProofTheme.spacingSM) {
+                        settingOption(label: "3s", isSelected: countdownSeconds == 3) { countdownSeconds = 3 }
+                        settingOption(label: "5s", isSelected: countdownSeconds == 5) { countdownSeconds = 5 }
+                        settingOption(label: "10s", isSelected: countdownSeconds == 10) { countdownSeconds = 10 }
+                    }
                 }
+                .accessibilityElement(children: .contain)
                 .accessibilityLabel("Countdown timer duration")
+                .padding(.vertical, ProofTheme.spacingXS)
             } header: {
                 Text("CAPTURE")
                     .proofFont(12, weight: .light, relativeTo: .caption1)
@@ -93,6 +120,38 @@ struct SettingsView: View {
         .background(ProofTheme.background)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func settingOption(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            ProofTheme.hapticLight()
+            withAnimation(.easeInOut(duration: 0.2)) {
+                action()
+            }
+        } label: {
+            HStack(spacing: ProofTheme.spacingSM) {
+                Text(label)
+                    .proofFont(15, weight: .light, relativeTo: .body)
+                    .foregroundStyle(isSelected ? ProofTheme.background : ProofTheme.textPrimary)
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .light))
+                        .foregroundStyle(ProofTheme.background)
+                        .transition(.opacity)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 44)
+            .background(isSelected ? ProofTheme.accent : ProofTheme.elevated)
+            .overlay(
+                RoundedRectangle(cornerRadius: ProofTheme.radiusSM)
+                    .strokeBorder(isSelected ? Color.clear : ProofTheme.separator, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
+        }
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func privacyRow(text: String) -> some View {
