@@ -1,0 +1,6 @@
+// Build Configuration — checked into source control
+// Supabase.xcconfig.example provides safe placeholder values (checked in).
+// Supabase.xcconfig (gitignored) overrides with real credentials when present.
+// Later includes take precedence, so real values win over placeholders.
+#include "Supabase.xcconfig.example"
+#include? "Supabase.xcconfig"
