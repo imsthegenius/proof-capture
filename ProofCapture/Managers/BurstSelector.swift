@@ -36,7 +36,7 @@ struct BurstSelector {
             // Disqualify frames Apple's model flags as screenshots/documents
             if aesthetics.isUtility { continue }
 
-            let hasAesthetics = aesthetics.normalized > 0 || aesthetics.isUtility
+            let hasAesthetics = aesthetics.isAvailable
 
             // When aesthetics unavailable (iOS 17), preserve original weights
             let score: Float
@@ -75,8 +75,9 @@ struct BurstSelector {
     private struct AestheticsResult {
         let normalized: Float
         let isUtility: Bool
+        let isAvailable: Bool
 
-        static let unavailable = AestheticsResult(normalized: 0, isUtility: false)
+        static let unavailable = AestheticsResult(normalized: 0, isUtility: false, isAvailable: false)
     }
 
     private static func aestheticsScore(for image: UIImage) async -> AestheticsResult {
@@ -107,7 +108,8 @@ struct BurstSelector {
         let normalized = (result.overallScore + 1.0) / 2.0
         return AestheticsResult(
             normalized: normalized,
-            isUtility: result.isUtility
+            isUtility: result.isUtility,
+            isAvailable: true
         )
     }
 

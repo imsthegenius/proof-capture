@@ -143,6 +143,7 @@ struct PhotoQualityGate {
         guard let cgImage = image.cgImage else { return nil }
         let ciImage = CIImage(cgImage: cgImage)
         let extent = ciImage.extent
+        let context = CIContext(options: [.useSoftwareRenderer: false])
 
         // Segment person to measure exposure on the body, not the background
         let segRequest = VNGeneratePersonSegmentationRequest()
@@ -155,40 +156,56 @@ struct PhotoQualityGate {
             return nil
         }
 
-        let measureImage: CIImage
-        if let segResult = segRequest.results?.first {
-            let maskImage = CIImage(cvPixelBuffer: segResult.pixelBuffer)
-            let scaledMask = maskImage.transformed(by: CGAffineTransform(
-                scaleX: extent.width / maskImage.extent.width,
-                y: extent.height / maskImage.extent.height
-            ))
-            let black = CIImage(color: .black).cropped(to: extent)
-            measureImage = ciImage.applyingFilter("CIBlendWithMask", parameters: [
-                kCIInputBackgroundImageKey: black,
-                kCIInputMaskImageKey: scaledMask
-            ])
-        } else {
-            // No person detected — fall back to full-frame
-            measureImage = ciImage
+        guard let segResult = segRequest.results?.first else {
+            // No person detected — skip exposure check
+            return nil
         }
 
+        let maskImage = CIImage(cvPixelBuffer: segResult.pixelBuffer)
+        let scaledMask = maskImage.transformed(by: CGAffineTransform(
+            scaleX: extent.width / maskImage.extent.width,
+            y: extent.height / maskImage.extent.height
+        ))
+
+        // Measure mask coverage (average of mask = fraction of frame occupied by person)
+        let coverage = averageBrightness(of: scaledMask, in: extent, context: context)
+        guard coverage > 0.02 else { return nil }
+
+        // Measure person-masked brightness and normalize by coverage
+        let black = CIImage(color: .black).cropped(to: extent)
+        let personImage = ciImage.applyingFilter("CIBlendWithMask", parameters: [
+            kCIInputBackgroundImageKey: black,
+            kCIInputMaskImageKey: scaledMask
+        ])
+
+        let rawBrightness = averageBrightness(of: personImage, in: extent, context: context)
+        let brightness = min(rawBrightness / coverage, 1.0)
+
+        if brightness < 0.12 {
+            return "Too dark for comparison"
+        } else if brightness > 0.85 {
+            return "Overexposed — too bright"
+        }
+        return nil
+    }
+
+    private static func averageBrightness(of image: CIImage, in rect: CGRect, context: CIContext) -> Double {
         guard let avgFilter = CIFilter(
             name: "CIAreaAverage",
             parameters: [
-                kCIInputImageKey: measureImage,
+                kCIInputImageKey: image,
                 kCIInputExtentKey: CIVector(
-                    x: extent.origin.x,
-                    y: extent.origin.y,
-                    z: extent.size.width,
-                    w: extent.size.height
+                    x: rect.origin.x,
+                    y: rect.origin.y,
+                    z: rect.size.width,
+                    w: rect.size.height
                 )
             ]
         ),
         let avgOutput = avgFilter.outputImage else {
-            return nil
+            return 0.5
         }
 
-        let context = CIContext(options: [.useSoftwareRenderer: false])
         var pixel = [UInt8](repeating: 0, count: 4)
         context.render(
             avgOutput,
@@ -202,13 +219,6 @@ struct PhotoQualityGate {
         let r = Double(pixel[0]) / 255.0
         let g = Double(pixel[1]) / 255.0
         let b = Double(pixel[2]) / 255.0
-        let brightness = 0.299 * r + 0.587 * g + 0.114 * b
-
-        if brightness < 0.12 {
-            return "Too dark for comparison"
-        } else if brightness > 0.85 {
-            return "Overexposed — too bright"
-        }
-        return nil
+        return 0.299 * r + 0.587 * g + 0.114 * b
     }
 }
