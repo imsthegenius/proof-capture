@@ -23,6 +23,7 @@ else
     cp "$TEMPLATE" "$XCCONFIG"
     echo "Created Supabase.xcconfig from template."
     echo "Fill in real values to connect to Supabase."
+    echo "Note: xcconfig treats // as comments. Use /\$()/ in URLs (see template)."
 fi
 
 echo ""

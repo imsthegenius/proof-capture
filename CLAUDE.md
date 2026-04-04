@@ -27,6 +27,7 @@ xcodebuild -project ProofCapture.xcodeproj -scheme ProofCapture -destination 'ge
 ```
 Works on clean checkout — `BuildConfig.xcconfig` provides placeholder Supabase values.
 For real credentials, run `./scripts/bootstrap.sh` and fill in `Supabase.xcconfig`.
+Note: xcconfig treats `//` as comments — use `/$()/` in URL values (e.g., `https:/$()/example.supabase.co`).
 
 ## Brain Sync
 @~/Desktop/second-brain/ventures/proof/index.md
