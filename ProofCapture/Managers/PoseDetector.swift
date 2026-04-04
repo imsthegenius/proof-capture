@@ -226,8 +226,8 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
     //   Hip-width added as parallel confirmation signal (TWO-517).
     //   Shoulder-width side threshold raised 0.15 → 0.20 when combined
     //   with ear asymmetry or hip compression.
-    //   Shoulder confidence floor raised 0.3 → 0.4 for width measurement
-    //   to reduce false narrow-shoulder reads at distance.
+    //   Shoulder confidence floor kept at 0.3 — raising to 0.4 caused
+    //   side_stage_good.jpg regression (shoulderWidth collapsed to 0).
     //
     // Back detection:
     //   noseConf < 0.10 unchanged — working correctly across test set.
@@ -255,9 +255,9 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         let leftHipConf = leftHip?.confidence ?? 0
         let rightHipConf = rightHip?.confidence ?? 0
 
-        // Shoulder width — confidence floor 0.4 for reliable measurement
+        // Shoulder width — both shoulders must be detected with confidence
         let shoulderWidth: CGFloat = {
-            guard leftShoulderConf > 0.4, rightShoulderConf > 0.4,
+            guard leftShoulderConf > 0.3, rightShoulderConf > 0.3,
                   let ls = leftShoulder, let rs = rightShoulder else { return 0 }
             return abs(ls.location.x - rs.location.x)
         }()

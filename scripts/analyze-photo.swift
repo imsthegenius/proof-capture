@@ -283,7 +283,7 @@ func analyzePose(cgImage: CGImage) -> PoseReport {
     let rightHipConf = rightHip?.confidence ?? 0
 
     let shoulderWidth: CGFloat = {
-        guard leftShoulderConf > 0.4, rightShoulderConf > 0.4,
+        guard leftShoulderConf > 0.3, rightShoulderConf > 0.3,
               let ls = leftShoulder, let rs = rightShoulder else { return 0 }
         return abs(ls.location.x - rs.location.x)
     }()
