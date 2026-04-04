@@ -13,6 +13,7 @@ struct ReviewView: View {
     @State private var showSaveConfirmation = false
     @State private var showDeleteConfirmation = false
     @State private var hasAppeared = false
+    @State private var savePulse = false
 
     // After capture — no session reference, shows "Session Complete"
     init(images: [Pose: UIImage]) {
@@ -157,11 +158,17 @@ struct ReviewView: View {
                 }
 
                 if isSaving {
-                    ProgressView()
-                        .tint(ProofTheme.overlayText)
+                    Text("Saving\u{2026}")
+                        .proofFont(15, weight: .light, relativeTo: .body)
+                        .foregroundStyle(ProofTheme.textPrimary)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 52)
+                        .frame(minHeight: 52)
                         .modifier(ProofTheme.PrimaryButtonBackground())
+                        .opacity(savePulse ? 1.0 : 0.4)
+                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: savePulse)
+                        .onAppear { savePulse = true }
+                        .onDisappear { savePulse = false }
+                        .accessibilityLabel("Saving photos")
                 } else if savedSuccessfully {
                     savedStateBadge
                 } else {
