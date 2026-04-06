@@ -8,6 +8,8 @@ import SwiftUI
 final class AuthManager {
     var isAuthenticated = false
     var userId: String?
+    var authError: String?
+    var isAuthenticating = false
 
     private var currentNonce: String?
     private static let logger = Logger(subsystem: "com.proof.capture", category: "AuthManager")
@@ -27,6 +29,9 @@ final class AuthManager {
     }
 
     func handleAppleSignIn(result: Result<ASAuthorization, any Error>) async {
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+
         switch result {
         case .success(let authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
@@ -46,10 +51,14 @@ final class AuthManager {
                 isAuthenticated = true
             } catch {
                 Self.logger.error("Supabase auth failed: \(String(describing: error), privacy: .public)")
+                authError = "Something went wrong. Please try again."
             }
 
         case .failure(let error):
             Self.logger.error("Apple sign in failed: \(String(describing: error), privacy: .public)")
+            if (error as? ASAuthorizationError)?.code != .canceled {
+                authError = "Sign in failed. Check your connection and try again."
+            }
         }
     }
 

@@ -1,9 +1,11 @@
-import SwiftUI
 import AVFoundation
+import SwiftUI
 
 struct PermissionStep: View {
     @AppStorage("userGender") private var genderRaw = 0
     let onComplete: () -> Void
+
+    @State private var permissionDenied = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,32 +42,30 @@ struct PermissionStep: View {
             Spacer()
 
             if permissionDenied {
-                Text("Camera access is required.\nGo to Settings → Proof Capture → Camera.")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                    .foregroundStyle(ProofTheme.statusPoor)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, ProofTheme.spacingMD)
+                VStack(spacing: ProofTheme.spacingMD) {
+                    Text("Camera access is required.\nEnable it in Settings to continue.")
+                        .proofFont(13, weight: .light, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.statusPoor)
+                        .multilineTextAlignment(.center)
+
+                    Button {
+                        ProofTheme.hapticLight()
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Text("Open Settings")
+                    }
+                    .buttonStyle(ProofTheme.ProofSecondaryButtonStyle())
+                    .padding(.horizontal, ProofTheme.spacingXL)
+                    .accessibilityLabel("Open Settings to grant camera access")
+                }
+                .padding(.bottom, ProofTheme.spacingMD)
             }
 
             Button(action: {
                 ProofTheme.hapticLight()
-                Task {
-                    let status = AVCaptureDevice.authorizationStatus(for: .video)
-                    if status == .notDetermined {
-                        let granted = await AVCaptureDevice.requestAccess(for: .video)
-                        if granted {
-                            ProofTheme.hapticSuccess()
-                            onComplete()
-                        } else {
-                            permissionDenied = true
-                        }
-                    } else if status == .authorized {
-                        ProofTheme.hapticSuccess()
-                        onComplete()
-                    } else {
-                        permissionDenied = true
-                    }
-                }
+                Task { await requestCameraAccess() }
             }) {
                 Text("Continue")
             }
@@ -75,9 +75,37 @@ struct PermissionStep: View {
             .accessibilityLabel("Grant camera access and continue")
         }
         .proofDynamicType()
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            guard permissionDenied else { return }
+            Task { await recheckPermission() }
+        }
     }
 
-    @State private var permissionDenied = false
+    private func requestCameraAccess() async {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        if status == .notDetermined {
+            let granted = await AVCaptureDevice.requestAccess(for: .video)
+            if granted {
+                ProofTheme.hapticSuccess()
+                onComplete()
+            } else {
+                permissionDenied = true
+            }
+        } else if status == .authorized {
+            ProofTheme.hapticSuccess()
+            onComplete()
+        } else {
+            permissionDenied = true
+        }
+    }
+
+    private func recheckPermission() async {
+        if AVCaptureDevice.authorizationStatus(for: .video) == .authorized {
+            permissionDenied = false
+            ProofTheme.hapticSuccess()
+            onComplete()
+        }
+    }
 
     private func voiceButton(label: String, value: Int) -> some View {
         let isSelected = genderRaw == value
