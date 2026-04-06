@@ -180,6 +180,7 @@ final class SessionViewModel {
                         positionQuality: poseDetector.positionQuality,
                         poseMatches: poseDetector.poseMatchesExpected,
                         armsRelaxed: poseDetector.armsRelaxed,
+                        lightingQuality: lightingAnalyzer.quality,
                         targetPose: currentPose,
                         detectedOrientation: poseDetector.detectedOrientation
                     )

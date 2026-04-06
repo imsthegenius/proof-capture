@@ -7,6 +7,40 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2CD29154F45042A4A581C889 /* f_guidance_adjust_position.m4a in Resources */ = {isa = PBXBuildFile; fileRef = E2F06A4F517AAEF7158DB02A /* f_guidance_adjust_position.m4a */; };
+		6DCC4DF7F037D68E5D2FABF6 /* f_guidance_arms.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 7D4E4EE132E694DB78C02A0D /* f_guidance_arms.m4a */; };
+		C46BAC4BA059ABE2C40CA36C /* f_guidance_no_body.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 8368F75255827AFEF3564B8B /* f_guidance_no_body.m4a */; };
+		592F225440D536D99CA1CEEE /* f_guidance_overhead.m4a in Resources */ = {isa = PBXBuildFile; fileRef = CE0D8FDB6A65612D5E412944 /* f_guidance_overhead.m4a */; };
+		4F1619156B7D27B62A72F5CE /* f_orient_back_from_front.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 3FE551373F36B5C61D03865D /* f_orient_back_from_front.m4a */; };
+		1D155C42A2ECB28C14264D5F /* f_orient_back_from_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 19D4CD8FD5E23FC81E392EB9 /* f_orient_back_from_side.m4a */; };
+		27611585441AA486D9B1C41E /* f_orient_front_from_back.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F975B455DD2CE391A35FEC69 /* f_orient_front_from_back.m4a */; };
+		41099D10AAB969D4CF1D67AF /* f_orient_front_from_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = DFAEDA76C52ACBA5C511EB1E /* f_orient_front_from_side.m4a */; };
+		C6FA59C4CBEAEAED4A3C943B /* f_orient_side_from_back.m4a in Resources */ = {isa = PBXBuildFile; fileRef = EC59F910A9861806D575ABE2 /* f_orient_side_from_back.m4a */; };
+		7DDB51BCF4E34C0545286CFE /* f_orient_side_from_front.m4a in Resources */ = {isa = PBXBuildFile; fileRef = B0D90ECF043658E7EE991C5E /* f_orient_side_from_front.m4a */; };
+		535201CAC205A71AAD8A389F /* f_pose_back.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 462FC24479B6EE55ED9A743A /* f_pose_back.m4a */; };
+		0A5C605F2F41A6E6A38EC91E /* f_pose_front.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 555AE245403BEB2C5C401BB9 /* f_pose_front.m4a */; };
+		9234559E117396B43E025F9F /* f_pose_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = EA238C8A978BE9EF306CA0E8 /* f_pose_side.m4a */; };
+		6015460EBF06CEEB7BF270F5 /* f_session_complete.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 4BA698BD564BDC8D225323BB /* f_session_complete.m4a */; };
+		FF8CD331CBA240F634DD9F01 /* f_transition_front_to_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 0DD23292FA30FFC887B8C49F /* f_transition_front_to_side.m4a */; };
+		EE9082546589E695337F8C49 /* f_transition_side_to_back.m4a in Resources */ = {isa = PBXBuildFile; fileRef = C38AF89BCAF257FCB4C1475F /* f_transition_side_to_back.m4a */; };
+		0D9C050BC8396DB1EF14C019 /* VoicePlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB0EEFB8B253F839039BE0DD /* VoicePlayer.swift */; };
+		EFDFA83EFA868A0D53E55385 /* guidance_adjust_position.m4a in Resources */ = {isa = PBXBuildFile; fileRef = D79E4688E0292671E4AC59E5 /* guidance_adjust_position.m4a */; };
+		9BD2DF85FDD937D1DF58ACA6 /* guidance_arms.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 4A95002BF729A39F80CD88DC /* guidance_arms.m4a */; };
+		01F5B66E16ACFFA3830B5D77 /* guidance_no_body.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 4E1514FA03EB7B086987F939 /* guidance_no_body.m4a */; };
+		AF1829D8C67CE6ED7DF9BCD1 /* guidance_overhead.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 3E0A32CD88A3255349DCF8C5 /* guidance_overhead.m4a */; };
+		A5FDDAF476C747080002C3BB /* orient_back_from_front.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 230A9232B933D9C9F20FA647 /* orient_back_from_front.m4a */; };
+		8A85DF1E637C6D29A93098AE /* orient_back_from_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 3AF30D9C626C864128F13F18 /* orient_back_from_side.m4a */; };
+		C4DBFCED20DF60B1C3F3EFCC /* orient_front_from_back.m4a in Resources */ = {isa = PBXBuildFile; fileRef = BB5D302BC734F84369AF29D6 /* orient_front_from_back.m4a */; };
+		4E90B2A3FE824CE43D35D926 /* orient_front_from_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 22DF288D4E047FD8288FF0EB /* orient_front_from_side.m4a */; };
+		09FC57C408167442A7726763 /* orient_side_from_back.m4a in Resources */ = {isa = PBXBuildFile; fileRef = E7481AB17927E39B333AA11D /* orient_side_from_back.m4a */; };
+		D4DC932B03CC4E2D3E4C8AE5 /* orient_side_from_front.m4a in Resources */ = {isa = PBXBuildFile; fileRef = AF7DBECDF807B0632925CE1B /* orient_side_from_front.m4a */; };
+		501A7DA52384D24CE8017E86 /* pose_back.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1A5B078064E0E5F7F0873B0A /* pose_back.m4a */; };
+		5BB7F0AC8FC724BC08AF61AB /* pose_front.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 979C1B9CC40FA349079EA6C9 /* pose_front.m4a */; };
+		ABBA4679141C6684E5B1EE32 /* pose_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = CF34DF9E07A114BF4F5305E5 /* pose_side.m4a */; };
+		2BC7E8C6031E831D94D2AE88 /* session_complete.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 88F7F3CEF6A8CFADC2929A5D /* session_complete.m4a */; };
+		A0195A067F546DAE52C7EBB3 /* transition_front_to_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 694E9026E21128F3B9562876 /* transition_front_to_side.m4a */; };
+		BC05ADFC930A333A1770DF57 /* transition_side_to_back.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 0501AF404EA0B25AD0C6F0F2 /* transition_side_to_back.m4a */; };
+
 		05C0E90471F9F6BAD6DC2543 /* QualityLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF944C33B87AC1272A2B3214 /* QualityLevel.swift */; };
 		0A7269AC94454AA45E6A005E /* SyncStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC159EF1EB0DCE295111826 /* SyncStatus.swift */; };
 		0E306A9AEF53F0A30C380107 /* Pose.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C689DCF32DF2923A486011 /* Pose.swift */; };
@@ -46,6 +80,40 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		E2F06A4F517AAEF7158DB02A /* f_guidance_adjust_position.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_guidance_adjust_position.m4a; sourceTree = "<group>"; };
+		7D4E4EE132E694DB78C02A0D /* f_guidance_arms.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_guidance_arms.m4a; sourceTree = "<group>"; };
+		8368F75255827AFEF3564B8B /* f_guidance_no_body.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_guidance_no_body.m4a; sourceTree = "<group>"; };
+		CE0D8FDB6A65612D5E412944 /* f_guidance_overhead.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_guidance_overhead.m4a; sourceTree = "<group>"; };
+		3FE551373F36B5C61D03865D /* f_orient_back_from_front.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_orient_back_from_front.m4a; sourceTree = "<group>"; };
+		19D4CD8FD5E23FC81E392EB9 /* f_orient_back_from_side.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_orient_back_from_side.m4a; sourceTree = "<group>"; };
+		F975B455DD2CE391A35FEC69 /* f_orient_front_from_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_orient_front_from_back.m4a; sourceTree = "<group>"; };
+		DFAEDA76C52ACBA5C511EB1E /* f_orient_front_from_side.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_orient_front_from_side.m4a; sourceTree = "<group>"; };
+		EC59F910A9861806D575ABE2 /* f_orient_side_from_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_orient_side_from_back.m4a; sourceTree = "<group>"; };
+		B0D90ECF043658E7EE991C5E /* f_orient_side_from_front.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_orient_side_from_front.m4a; sourceTree = "<group>"; };
+		462FC24479B6EE55ED9A743A /* f_pose_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_pose_back.m4a; sourceTree = "<group>"; };
+		555AE245403BEB2C5C401BB9 /* f_pose_front.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_pose_front.m4a; sourceTree = "<group>"; };
+		EA238C8A978BE9EF306CA0E8 /* f_pose_side.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_pose_side.m4a; sourceTree = "<group>"; };
+		4BA698BD564BDC8D225323BB /* f_session_complete.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_session_complete.m4a; sourceTree = "<group>"; };
+		0DD23292FA30FFC887B8C49F /* f_transition_front_to_side.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_transition_front_to_side.m4a; sourceTree = "<group>"; };
+		C38AF89BCAF257FCB4C1475F /* f_transition_side_to_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = f_transition_side_to_back.m4a; sourceTree = "<group>"; };
+		EB0EEFB8B253F839039BE0DD /* VoicePlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoicePlayer.swift; sourceTree = "<group>"; };
+		D79E4688E0292671E4AC59E5 /* guidance_adjust_position.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = guidance_adjust_position.m4a; sourceTree = "<group>"; };
+		4A95002BF729A39F80CD88DC /* guidance_arms.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = guidance_arms.m4a; sourceTree = "<group>"; };
+		4E1514FA03EB7B086987F939 /* guidance_no_body.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = guidance_no_body.m4a; sourceTree = "<group>"; };
+		3E0A32CD88A3255349DCF8C5 /* guidance_overhead.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = guidance_overhead.m4a; sourceTree = "<group>"; };
+		230A9232B933D9C9F20FA647 /* orient_back_from_front.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = orient_back_from_front.m4a; sourceTree = "<group>"; };
+		3AF30D9C626C864128F13F18 /* orient_back_from_side.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = orient_back_from_side.m4a; sourceTree = "<group>"; };
+		BB5D302BC734F84369AF29D6 /* orient_front_from_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = orient_front_from_back.m4a; sourceTree = "<group>"; };
+		22DF288D4E047FD8288FF0EB /* orient_front_from_side.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = orient_front_from_side.m4a; sourceTree = "<group>"; };
+		E7481AB17927E39B333AA11D /* orient_side_from_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = orient_side_from_back.m4a; sourceTree = "<group>"; };
+		AF7DBECDF807B0632925CE1B /* orient_side_from_front.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = orient_side_from_front.m4a; sourceTree = "<group>"; };
+		1A5B078064E0E5F7F0873B0A /* pose_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = pose_back.m4a; sourceTree = "<group>"; };
+		979C1B9CC40FA349079EA6C9 /* pose_front.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = pose_front.m4a; sourceTree = "<group>"; };
+		CF34DF9E07A114BF4F5305E5 /* pose_side.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = pose_side.m4a; sourceTree = "<group>"; };
+		88F7F3CEF6A8CFADC2929A5D /* session_complete.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = session_complete.m4a; sourceTree = "<group>"; };
+		694E9026E21128F3B9562876 /* transition_front_to_side.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = transition_front_to_side.m4a; sourceTree = "<group>"; };
+		0501AF404EA0B25AD0C6F0F2 /* transition_side_to_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = transition_side_to_back.m4a; sourceTree = "<group>"; };
+
 		0A0095E1484CF0A9A2253C82 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		0DC159EF1EB0DCE295111826 /* SyncStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatus.swift; sourceTree = "<group>"; };
 		0F0F52DF3481A9B22343AB76 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -99,6 +167,52 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B133C07362A9E0C6BB632790 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				C593BACE61A4FE94BBDA82E5 /* Audio */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		C593BACE61A4FE94BBDA82E5 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				D79E4688E0292671E4AC59E5 /* guidance_adjust_position.m4a */,
+				4A95002BF729A39F80CD88DC /* guidance_arms.m4a */,
+				4E1514FA03EB7B086987F939 /* guidance_no_body.m4a */,
+				3E0A32CD88A3255349DCF8C5 /* guidance_overhead.m4a */,
+				230A9232B933D9C9F20FA647 /* orient_back_from_front.m4a */,
+				3AF30D9C626C864128F13F18 /* orient_back_from_side.m4a */,
+				BB5D302BC734F84369AF29D6 /* orient_front_from_back.m4a */,
+				22DF288D4E047FD8288FF0EB /* orient_front_from_side.m4a */,
+				E7481AB17927E39B333AA11D /* orient_side_from_back.m4a */,
+				AF7DBECDF807B0632925CE1B /* orient_side_from_front.m4a */,
+				1A5B078064E0E5F7F0873B0A /* pose_back.m4a */,
+				979C1B9CC40FA349079EA6C9 /* pose_front.m4a */,
+				CF34DF9E07A114BF4F5305E5 /* pose_side.m4a */,
+				88F7F3CEF6A8CFADC2929A5D /* session_complete.m4a */,
+				694E9026E21128F3B9562876 /* transition_front_to_side.m4a */,
+				0501AF404EA0B25AD0C6F0F2 /* transition_side_to_back.m4a */,
+				E2F06A4F517AAEF7158DB02A /* f_guidance_adjust_position.m4a */,
+				7D4E4EE132E694DB78C02A0D /* f_guidance_arms.m4a */,
+				8368F75255827AFEF3564B8B /* f_guidance_no_body.m4a */,
+				CE0D8FDB6A65612D5E412944 /* f_guidance_overhead.m4a */,
+				3FE551373F36B5C61D03865D /* f_orient_back_from_front.m4a */,
+				19D4CD8FD5E23FC81E392EB9 /* f_orient_back_from_side.m4a */,
+				F975B455DD2CE391A35FEC69 /* f_orient_front_from_back.m4a */,
+				DFAEDA76C52ACBA5C511EB1E /* f_orient_front_from_side.m4a */,
+				EC59F910A9861806D575ABE2 /* f_orient_side_from_back.m4a */,
+				B0D90ECF043658E7EE991C5E /* f_orient_side_from_front.m4a */,
+				462FC24479B6EE55ED9A743A /* f_pose_back.m4a */,
+				555AE245403BEB2C5C401BB9 /* f_pose_front.m4a */,
+				EA238C8A978BE9EF306CA0E8 /* f_pose_side.m4a */,
+				4BA698BD564BDC8D225323BB /* f_session_complete.m4a */,
+				0DD23292FA30FFC887B8C49F /* f_transition_front_to_side.m4a */,
+				C38AF89BCAF257FCB4C1475F /* f_transition_side_to_back.m4a */);
+			path = Audio;
+			sourceTree = "<group>";
+		};
 		086AD1B3A7CCA3E7F2DA7C9B /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -142,6 +256,7 @@
 			isa = PBXGroup;
 			children = (
 				200EBD3D73D02DBBB9A2D15A /* AudioGuide.swift */,
+				EB0EEFB8B253F839039BE0DD /* VoicePlayer.swift */,
 				D55182909E51E9F4B538093C /* BurstSelector.swift */,
 				5804C60DFA93278F46B0F54C /* CameraManager.swift */,
 				819571813DFCC5178ED2A171 /* LightingAnalyzer.swift */,
@@ -203,6 +318,7 @@
 				2E843DB24518B897621334A4 /* Theme */,
 				3712962563DA2049ECCD4EDC /* ViewModels */,
 				61CE069BFC9341F5E222822B /* Views */,
+				B133C07362A9E0C6BB632790 /* Resources */,
 			);
 			path = ProofCapture;
 			sourceTree = "<group>";
@@ -232,6 +348,38 @@
 			files = (
 				6A080D41A0D6D10EA05F1B64 /* Assets.xcassets in Resources */,
 				AC158DA7D273D3C6546C721E /* PrivacyInfo.xcprivacy in Resources */,
+				EFDFA83EFA868A0D53E55385 /* m4a in Resources */,
+				9BD2DF85FDD937D1DF58ACA6 /* m4a in Resources */,
+				01F5B66E16ACFFA3830B5D77 /* m4a in Resources */,
+				AF1829D8C67CE6ED7DF9BCD1 /* m4a in Resources */,
+				A5FDDAF476C747080002C3BB /* m4a in Resources */,
+				8A85DF1E637C6D29A93098AE /* m4a in Resources */,
+				C4DBFCED20DF60B1C3F3EFCC /* m4a in Resources */,
+				4E90B2A3FE824CE43D35D926 /* m4a in Resources */,
+				09FC57C408167442A7726763 /* m4a in Resources */,
+				D4DC932B03CC4E2D3E4C8AE5 /* m4a in Resources */,
+				501A7DA52384D24CE8017E86 /* m4a in Resources */,
+				5BB7F0AC8FC724BC08AF61AB /* m4a in Resources */,
+				ABBA4679141C6684E5B1EE32 /* m4a in Resources */,
+				2BC7E8C6031E831D94D2AE88 /* m4a in Resources */,
+				A0195A067F546DAE52C7EBB3 /* m4a in Resources */,
+				BC05ADFC930A333A1770DF57 /* m4a in Resources */,
+				2CD29154F45042A4A581C889 /* f_guidance_adjust_position.m4a in Resources */,
+				6DCC4DF7F037D68E5D2FABF6 /* f_guidance_arms.m4a in Resources */,
+				C46BAC4BA059ABE2C40CA36C /* f_guidance_no_body.m4a in Resources */,
+				592F225440D536D99CA1CEEE /* f_guidance_overhead.m4a in Resources */,
+				4F1619156B7D27B62A72F5CE /* f_orient_back_from_front.m4a in Resources */,
+				1D155C42A2ECB28C14264D5F /* f_orient_back_from_side.m4a in Resources */,
+				27611585441AA486D9B1C41E /* f_orient_front_from_back.m4a in Resources */,
+				41099D10AAB969D4CF1D67AF /* f_orient_front_from_side.m4a in Resources */,
+				C6FA59C4CBEAEAED4A3C943B /* f_orient_side_from_back.m4a in Resources */,
+				7DDB51BCF4E34C0545286CFE /* f_orient_side_from_front.m4a in Resources */,
+				535201CAC205A71AAD8A389F /* f_pose_back.m4a in Resources */,
+				0A5C605F2F41A6E6A38EC91E /* f_pose_front.m4a in Resources */,
+				9234559E117396B43E025F9F /* f_pose_side.m4a in Resources */,
+				6015460EBF06CEEB7BF270F5 /* f_session_complete.m4a in Resources */,
+				FF8CD331CBA240F634DD9F01 /* f_transition_front_to_side.m4a in Resources */,
+				EE9082546589E695337F8C49 /* f_transition_side_to_back.m4a in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -297,6 +445,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				52E994F3514E9E9A0A7BD152 /* AudioGuide.swift in Sources */,
+				0D9C050BC8396DB1EF14C019 /* VoicePlayer.swift in Sources */,
 				0F3A75EAF94D07BBC12280C6 /* AuthManager.swift in Sources */,
 				BE89A50596322410C9464BFE /* AuthView.swift in Sources */,
 				A483FA349399CB30FDC7512B /* BurstSelector.swift in Sources */,
