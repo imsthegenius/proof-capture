@@ -41,15 +41,24 @@ struct AuthView: View {
             Spacer()
 
             VStack(spacing: ProofTheme.spacingMD) {
-                SignInWithAppleButton(.signIn) { request in
-                    authManager.prepareRequest(request)
-                } onCompletion: { result in
-                    Task { await authManager.handleAppleSignIn(result: result) }
+                ZStack {
+                    SignInWithAppleButton(.signIn) { request in
+                        authManager.prepareRequest(request)
+                    } onCompletion: { result in
+                        Task { await authManager.handleAppleSignIn(result: result) }
+                    }
+                    .signInWithAppleButtonStyle(.white)
+                    .frame(height: 52)
+                    .clipShape(.capsule)
+                    .accessibilityLabel("Sign in with Apple")
+                    .disabled(authManager.isAuthenticating)
+                    .opacity(authManager.isAuthenticating ? 0.4 : 1)
+
+                    if authManager.isAuthenticating {
+                        ProgressView()
+                            .tint(ProofTheme.textPrimary)
+                    }
                 }
-                .signInWithAppleButtonStyle(.white)
-                .frame(height: 52)
-                .clipShape(.capsule)
-                .accessibilityLabel("Sign in with Apple")
 
                 Text("Your photos stay private and backed up")
                     .proofFont(13, weight: .light, relativeTo: .footnote)
@@ -65,6 +74,17 @@ struct AuthView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .proofDynamicType()
         .background(ProofTheme.background)
+        .alert(
+            "Sign In Failed",
+            isPresented: Binding(
+                get: { authManager.authError != nil },
+                set: { if !$0 { authManager.authError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(authManager.authError ?? "")
+        }
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) {
                 titleVisible = true

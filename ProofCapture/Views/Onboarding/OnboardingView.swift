@@ -8,18 +8,18 @@ struct OnboardingView: View {
         ZStack {
             ProofTheme.background.ignoresSafeArea()
 
-            TabView(selection: $currentStep) {
-                WelcomeStep(onNext: { currentStep = 1 })
-                    .tag(0)
-
-                SetupGuideStep(onNext: { currentStep = 2 })
-                    .tag(1)
-
-                PermissionStep(onComplete: { hasCompletedOnboarding = true })
-                    .tag(2)
+            Group {
+                switch currentStep {
+                case 1:
+                    SetupGuideStep(onNext: { currentStep = 2 })
+                case 2:
+                    PermissionStep(onComplete: { hasCompletedOnboarding = true })
+                default:
+                    WelcomeStep(onNext: { currentStep = 1 })
+                }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.3), value: currentStep)
+            .id(currentStep)
+            .transition(.push(from: .trailing))
 
             VStack {
                 Spacer()
@@ -33,5 +33,6 @@ struct OnboardingView: View {
                 .padding(.bottom, ProofTheme.spacingLG)
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: currentStep)
     }
 }
