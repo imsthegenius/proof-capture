@@ -44,6 +44,7 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
         positionQuality: QualityLevel,
         poseMatches: Bool,
         armsRelaxed: Bool,
+        lightingQuality: QualityLevel,
         targetPose: Pose,
         detectedOrientation: Pose?
     ) async {
@@ -72,6 +73,11 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
 
         if positionQuality == .poor {
             await voicePlayer.play(.guidanceAdjustPosition)
+            return
+        }
+
+        if lightingQuality == .poor {
+            await voicePlayer.play(.guidanceOverhead)
             return
         }
     }
