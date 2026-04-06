@@ -24,8 +24,6 @@
 	<string>Proof needs camera access to capture your progress photos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Proof saves your progress photos to your camera roll.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Proof uses audio to guide you through photo capture.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -44,7 +42,10 @@
 	<key>SUPABASE_REDIRECT_URL</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)://auth-callback</string>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

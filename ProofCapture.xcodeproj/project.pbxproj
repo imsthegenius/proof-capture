@@ -41,6 +41,8 @@
 		F74A52A301CFEE2C837DA1EE /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41ADDCFB0E0EF008251FA1A2 /* SupabaseClient.swift */; };
 		FA6544E66117DAF4B988E039 /* PermissionStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCA47A9DAC3EEBC632811F3 /* PermissionStep.swift */; };
 		FB1A3C4E9D7E82A1C5B04D67 /* PhotoQualityGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8F1A2B7C4D56E9A0123456 /* PhotoQualityGate.swift */; };
+		6A080D41A0D6D10EA05F1B64 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 930B3A24DC1B65078CC763D9 /* Assets.xcassets */; };
+		AC158DA7D273D3C6546C721E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D2101FEBFCEC0F95906B5CBB /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -81,6 +83,8 @@
 		EF9F7E3F242518734ECAE7EE /* SetupGuideStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideStep.swift; sourceTree = "<group>"; };
 		3E8F1A2B7C4D56E9A0123456 /* PhotoQualityGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoQualityGate.swift; sourceTree = "<group>"; };
 		"TEMP_5B22DEC2-0B00-451A-8E4D-C4E4333F1C75" /* BuildConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildConfig.xcconfig; sourceTree = "<group>"; };
+		930B3A24DC1B65078CC763D9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D2101FEBFCEC0F95906B5CBB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -187,8 +191,10 @@
 		AFCBC375FF9714FAFECEF428 /* ProofCapture */ = {
 			isa = PBXGroup;
 			children = (
+				930B3A24DC1B65078CC763D9 /* Assets.xcassets */,
 				57301627A44ECC0429ED1189 /* ContentView.swift */,
 				0F0F52DF3481A9B22343AB76 /* Info.plist */,
+				D2101FEBFCEC0F95906B5CBB /* PrivacyInfo.xcprivacy */,
 				67D046BC271F36FE6DBAB14D /* ProofCapture.entitlements */,
 				8CDD1F714824469368789AAB /* ProofCaptureApp.swift */,
 				409E111AE29BF928C61A999A /* Managers */,
@@ -219,6 +225,18 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXResourcesBuildPhase section */
+		B7C4E8F2A1D3950687E42C0A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6A080D41A0D6D10EA05F1B64 /* Assets.xcassets in Resources */,
+				AC158DA7D273D3C6546C721E /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXNativeTarget section */
 		2360B2D5F9DA048D70D36886 /* ProofCapture */ = {
 			isa = PBXNativeTarget;
@@ -226,6 +244,7 @@
 			buildPhases = (
 				72652911DCEA5D6F950A7B35 /* Sources */,
 				0EA23C9D150C658E88A78FE8 /* Frameworks */,
+				B7C4E8F2A1D3950687E42C0A /* Resources */,
 			);
 			buildRules = (
 			);

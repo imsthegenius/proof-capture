@@ -41,12 +41,12 @@ targets:
         CFBundleDisplayName: Proof
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSCameraUsageDescription: "Proof needs camera access to capture your progress photos."
         NSPhotoLibraryAddUsageDescription: "Proof saves your progress photos to your camera roll."
-        NSSpeechRecognitionUsageDescription: "Proof uses audio to guide you through photo capture."
         CFBundleURLTypes:
           - CFBundleURLName: $(PRODUCT_BUNDLE_IDENTIFIER)
             CFBundleURLSchemes:
