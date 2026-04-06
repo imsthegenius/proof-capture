@@ -14,7 +14,7 @@ XCCONFIG="$PROJECT_DIR/Supabase.xcconfig"
 TEMPLATE="$PROJECT_DIR/Supabase.xcconfig.example"
 
 if [ -f "$XCCONFIG" ]; then
-    echo "Supabase.xcconfig already exists — skipping."
+    echo "Supabase.xcconfig already exists — validating..."
 else
     if [ ! -f "$TEMPLATE" ]; then
         echo "ERROR: Supabase.xcconfig.example not found at $TEMPLATE"
@@ -23,7 +23,20 @@ else
     cp "$TEMPLATE" "$XCCONFIG"
     echo "Created Supabase.xcconfig from template."
     echo "Fill in real values to connect to Supabase."
-    echo "Note: xcconfig treats // as comments. Use /\$()/ in URLs (see template)."
+fi
+
+# Validate xcconfig: warn if any value contains bare // (xcconfig treats it as a comment)
+if grep -v '^\s*//' "$XCCONFIG" | grep -q '[^$]//'; then
+    echo ""
+    echo "WARNING: Supabase.xcconfig contains bare '//' in a value."
+    echo "xcconfig treats // as a comment delimiter — everything after it is stripped."
+    echo "Use /\$()/ instead of // in URL values."
+    echo ""
+    echo "Example:"
+    echo "  BAD:  SUPABASE_URL = https://example.supabase.co"
+    echo "  GOOD: SUPABASE_URL = https:/\$()/example.supabase.co"
+    echo ""
+    exit 1
 fi
 
 echo ""

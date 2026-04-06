@@ -19,8 +19,9 @@ final class AuthManager {
     }
 
     private func restoreSession() async {
+        guard let client = AppSupabase.client else { return }
         do {
-            let session = try await AppSupabase.client.auth.session
+            let session = try await client.auth.session
             userId = session.user.id.uuidString
             isAuthenticated = true
         } catch {
@@ -29,6 +30,11 @@ final class AuthManager {
     }
 
     func handleAppleSignIn(result: Result<ASAuthorization, any Error>) async {
+        guard let client = AppSupabase.client else {
+            Self.logger.warning("Supabase unavailable — cannot sign in")
+            return
+        }
+
         isAuthenticating = true
         defer { isAuthenticating = false }
 
@@ -40,7 +46,7 @@ final class AuthManager {
                   let nonce = currentNonce else { return }
 
             do {
-                let session = try await AppSupabase.client.auth.signInWithIdToken(
+                let session = try await client.auth.signInWithIdToken(
                     credentials: OpenIDConnectCredentials(
                         provider: .apple,
                         idToken: idTokenString,
@@ -70,7 +76,7 @@ final class AuthManager {
     }
 
     func signOut() async {
-        try? await AppSupabase.client.auth.signOut()
+        try? await AppSupabase.client?.auth.signOut()
         isAuthenticated = false
         userId = nil
     }

@@ -17,7 +17,7 @@ final class SyncManager {
     }
 
     func syncPendingSessions() async {
-        guard let modelContext, !isSyncing else { return }
+        guard let client, let modelContext, !isSyncing else { return }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -28,12 +28,12 @@ final class SyncManager {
         guard let sessions = try? modelContext.fetch(descriptor) else { return }
 
         for session in sessions {
-            await uploadSession(session)
+            await uploadSession(session, client: client)
         }
     }
 
     func restoreFromCloud(userId: String) async {
-        guard let modelContext else { return }
+        guard let client, let modelContext else { return }
 
         do {
             let remoteSessions: [RemotePhotoSession] = try await client
@@ -73,7 +73,7 @@ final class SyncManager {
 
     // MARK: - Private
 
-    private func uploadSession(_ session: PhotoSession) async {
+    private func uploadSession(_ session: PhotoSession, client: SupabaseClient) async {
         guard let userId = try? await client.auth.session.user.id.uuidString else { return }
 
         session.syncStatusRaw = SyncStatus.uploading.rawValue
@@ -103,12 +103,19 @@ final class SyncManager {
                 }
             }
 
+            guard let userUUID = UUID(uuidString: userId) else {
+                Self.logger.error("Invalid userId UUID: \(userId, privacy: .public)")
+                session.syncStatusRaw = SyncStatus.failed.rawValue
+                try? modelContext?.save()
+                return
+            }
+
             try await client
                 .from("photo_sessions")
                 .upsert(
                     RemotePhotoSession(
                         id: session.id,
-                        userId: UUID(uuidString: userId)!,
+                        userId: userUUID,
                         date: session.date,
                         frontPhotoPath: frontPath,
                         sidePhotoPath: sidePath,
