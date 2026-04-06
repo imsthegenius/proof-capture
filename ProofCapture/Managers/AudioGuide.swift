@@ -106,11 +106,6 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
         await voicePlayer.play(.sessionComplete)
     }
 
-    /// Speaks lighting guidance when flat lighting is detected.
-    func speakLightingGuidance() async {
-        guard mode == .voice else { return }
-        await voicePlayer.play(.guidanceOverhead)
-    }
 
     /// Stops any current speech or playback immediately.
     func stop() {
