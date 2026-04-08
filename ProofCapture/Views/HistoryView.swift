@@ -13,6 +13,7 @@ struct HistoryView: View {
     @State private var isCompareMode = false
     @State private var compareSelections: [PhotoSession] = []
     @State private var visibleRows: Set<UUID> = []
+    @State private var breathingOffset: CGFloat = 0
 
     private var calendar: Calendar { .autoupdatingCurrent }
     private var earliestSessionDate: Date? { sessions.last?.date }
@@ -53,6 +54,15 @@ struct HistoryView: View {
                 Text("0")
                     .proofFont(48, weight: .ultraLight, relativeTo: .largeTitle)
                     .foregroundStyle(ProofTheme.accent)
+                    .offset(y: breathingOffset)
+                    .onAppear {
+                        withAnimation(
+                            .easeInOut(duration: 3.0)
+                            .repeatForever(autoreverses: true)
+                        ) {
+                            breathingOffset = -4
+                        }
+                    }
 
                 Text("sessions")
                     .proofFont(15, weight: .light, relativeTo: .body)
