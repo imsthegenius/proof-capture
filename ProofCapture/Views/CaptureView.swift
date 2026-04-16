@@ -162,17 +162,11 @@ struct CaptureView: View {
     @ViewBuilder
     private var edgeCaseOverlay: some View {
         switch captureEdgeState {
-        case .lensBlocked:
-            statusOverlay(
-                icon: "camera.fill.badge.ellipsis",
-                title: "CHECK THE LENS",
-                body: "Looks like the lens is covered. Have a quick look at your camera, then we’ll try again."
-            )
-        case .noBodyLong:
+        case .noBody:
             statusOverlay(
                 icon: "figure.stand",
                 title: "STEP INTO FRAME",
-                body: "I can’t see you yet. Step into the frame when you’re ready."
+                body: "I can’t see you. Step into the frame, or check the lens isn’t covered."
             )
         case .none:
             EmptyView()

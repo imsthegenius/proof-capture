@@ -14,8 +14,7 @@ enum SessionPhase {
 }
 
 enum CaptureEdgeState: Equatable {
-    case noBodyLong
-    case lensBlocked
+    case noBody
 }
 
 @Observable
@@ -168,18 +167,15 @@ final class SessionViewModel {
         var readyDuration: TimeInterval = 0
         var timeSinceLastGuidance: TimeInterval = 0
         var noBodyDuration: TimeInterval = 0
-        var darkNoBodyDuration: TimeInterval = 0
         let checkInterval: TimeInterval = 0.25
         let requiredDuration: TimeInterval = 0.3
         let guidanceInterval: TimeInterval = 4.0
         let noBodyThreshold: TimeInterval = 8.0
-        let lensBlockedThreshold: TimeInterval = 2.0
 
         while !Task.isCancelled && phase == .positioning {
             if captureStatusMessage != nil || !cameraManager.isRunning {
                 readyDuration = 0
                 noBodyDuration = 0
-                darkNoBodyDuration = 0
                 captureEdgeState = nil
                 try? await Task.sleep(for: .milliseconds(Int(checkInterval * 1000)))
                 continue
@@ -187,21 +183,10 @@ final class SessionViewModel {
 
             if poseDetector.bodyDetected {
                 noBodyDuration = 0
-                darkNoBodyDuration = 0
                 captureEdgeState = nil
             } else {
                 noBodyDuration += checkInterval
-                darkNoBodyDuration = lightingAnalyzer.brightness < 0.05
-                    ? darkNoBodyDuration + checkInterval
-                    : 0
-
-                if darkNoBodyDuration >= lensBlockedThreshold {
-                    captureEdgeState = .lensBlocked
-                } else if noBodyDuration >= noBodyThreshold {
-                    captureEdgeState = .noBodyLong
-                } else {
-                    captureEdgeState = nil
-                }
+                captureEdgeState = noBodyDuration >= noBodyThreshold ? .noBody : nil
             }
 
             if poseDetector.isReady && lightingAnalyzer.quality != .poor {
@@ -215,7 +200,7 @@ final class SessionViewModel {
                 readyDuration = 0
 
                 timeSinceLastGuidance += checkInterval
-                if timeSinceLastGuidance >= guidanceInterval, captureEdgeState != .lensBlocked {
+                if timeSinceLastGuidance >= guidanceInterval {
                     timeSinceLastGuidance = 0
                     await audioGuide.speakPositionGuidance(
                         bodyDetected: poseDetector.bodyDetected,
@@ -290,7 +275,7 @@ final class SessionViewModel {
         guard !burst.isEmpty else {
             phase = .positioning
             currentBurst = []
-            captureEdgeState = .noBodyLong
+            captureEdgeState = .noBody
             return
         }
 
