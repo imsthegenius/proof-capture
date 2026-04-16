@@ -62,7 +62,7 @@ struct PoseGuideOverlay: View {
             let y = min(rect.maxY + 28, size.height - 28)
 
             Text(poseDetector.feedback)
-                .font(.system(size: 13, weight: .light))
+                .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(ProofTheme.overlayText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, ProofTheme.spacingMD)
