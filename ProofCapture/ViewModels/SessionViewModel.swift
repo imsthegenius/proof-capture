@@ -220,6 +220,54 @@ final class SessionViewModel {
         }
     }
 
+    /// Returns true if the environment is still suitable for a lock-to-burst
+    /// sequence. Intentionally does NOT check `poseMatchesExpected` or
+    /// `armsRelaxed` — those legitimately change during poseHold as the user
+    /// tenses into their pose. We guard against the user leaving the frame,
+    /// the lens being covered, lighting collapsing, or the capture session
+    /// entering a recoverable error state.
+    private func environmentStillViable() -> Bool {
+        poseDetector.bodyDetected
+            && lightingAnalyzer.quality != .poor
+            && captureStatusMessage == nil
+    }
+
+    /// Polls `environmentStillViable()` at 250ms intervals for the given
+    /// duration. Tolerates up to `graceFailures` consecutive failed checks
+    /// to absorb single-frame Vision flicker (hand waves, brief lighting
+    /// shifts). Returns true if the environment stayed viable throughout,
+    /// false if the grace window was exceeded.
+    private func holdViability(for totalDuration: TimeInterval,
+                               graceFailures: Int = 2) async -> Bool {
+        let checkInterval: TimeInterval = 0.25
+        let totalChecks = max(1, Int(totalDuration / checkInterval))
+        var failureStreak = 0
+
+        for _ in 0..<totalChecks {
+            try? await Task.sleep(for: .milliseconds(Int(checkInterval * 1000)))
+
+            if environmentStillViable() {
+                failureStreak = 0
+            } else {
+                failureStreak += 1
+                if failureStreak > graceFailures {
+                    return false
+                }
+            }
+        }
+
+        return true
+    }
+
+    /// Aborts a lock-to-burst sequence when the environment becomes
+    /// non-viable. Returns the session to `.positioning` so the SessionView
+    /// `.task(id:)` binding restarts `monitorReadiness`.
+    private func abortLockSequence() async {
+        phase = .positioning
+        captureEdgeState = nil
+        await audioGuide.speakLockLost()
+    }
+
     func beginLockSequence() async {
         guard phase == .positioning, captureStatusMessage == nil else { return }
         audioGuide.stop()
@@ -230,12 +278,24 @@ final class SessionViewModel {
             await audioGuide.speakLockAchieved()
         }
 
-        try? await Task.sleep(for: .milliseconds(800))
+        // 800ms lock-hold — keeps the "LOCKED" overlay briefly visible while
+        // the lock-achieved cue plays. Abort if the user leaves the frame.
+        let lockHeld = await holdViability(for: 0.8)
         guard phase == .locked else { return }
+        guard lockHeld else {
+            await abortLockSequence()
+            return
+        }
 
         phase = .poseHold
-        try? await Task.sleep(for: .seconds(UserPreferences.poseHoldSeconds))
+        // Pose window — user tenses into pose. Environment must stay viable,
+        // but a brief Vision flicker is absorbed by the grace window.
+        let poseHeld = await holdViability(for: TimeInterval(UserPreferences.poseHoldSeconds))
         guard phase == .poseHold else { return }
+        guard poseHeld else {
+            await abortLockSequence()
+            return
+        }
 
         await beginCountdown()
     }
@@ -249,7 +309,15 @@ final class SessionViewModel {
             guard phase == .countdown else { return }
             countdownValue = value
             audioGuide.playCountdownTick(isFinal: value == 1)
-            try? await Task.sleep(for: .seconds(1))
+
+            // Poll viability during the 1s tick window. Single-frame Vision
+            // flicker is absorbed by the grace failures in holdViability.
+            let tickHeld = await holdViability(for: 1.0)
+            guard phase == .countdown else { return }
+            guard tickHeld else {
+                await abortLockSequence()
+                return
+            }
         }
 
         guard phase == .countdown else { return }
