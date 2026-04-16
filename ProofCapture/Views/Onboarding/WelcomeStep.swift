@@ -1,70 +1,67 @@
 import SwiftUI
 
+/// Onboarding step 1 — dark world. Hero Checkd wordmark, brief value prop, primary CTA.
+/// Mirrors the AuthView entry treatment but with a single forward action.
 struct WelcomeStep: View {
     let onNext: () -> Void
 
-    @State private var titleVisible = false
-    @State private var iconVisible = false
-    @State private var subtitleVisible = false
+    @State private var visible = false
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            Text("PROOF")
-                .proofFont(60, weight: .ultraLight, relativeTo: .largeTitle, maximumScaleFactor: 1.25)
-                .tracking(12)
-                .foregroundStyle(ProofTheme.textPrimary)
-                .opacity(titleVisible ? 1 : 0)
-                .offset(y: titleVisible ? 0 : 8)
-                .accessibilityAddTraits(.isHeader)
+            VStack(spacing: ProofTheme.spacingMD) {
+                Text("checkd")
+                    .font(.system(size: 58, weight: .medium))
+                    .tracking(1)
+                    .foregroundStyle(ProofTheme.paperHi)
+                    .accessibilityAddTraits(.isHeader)
 
-            Image(systemName: "camera.viewfinder")
-                .font(.system(size: 28, weight: .ultraLight))
-                .foregroundStyle(ProofTheme.textTertiary)
-                .padding(.top, ProofTheme.spacingLG)
-                .opacity(iconVisible ? 1 : 0)
-                .offset(y: iconVisible ? 0 : 6)
-                .accessibilityHidden(true)
-
-            VStack(spacing: ProofTheme.spacingSM) {
-                Text("Private. Guided. Consistent.")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
+                Text("CONSISTENT · PRIVATE · GUIDED")
+                    .font(.system(size: 11, weight: .medium))
+                    .tracking(3)
                     .foregroundStyle(ProofTheme.textTertiary)
-
-                Text("Your phone guides you through\nperfect progress photos.")
-                    .proofFont(17, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(6)
             }
-            .padding(.top, ProofTheme.spacingMD)
-            .opacity(subtitleVisible ? 1 : 0)
-            .offset(y: subtitleVisible ? 0 : 8)
+            .opacity(visible ? 1 : 0)
+            .offset(y: visible ? 0 : 12)
 
             Spacer()
 
-            Button(action: {
+            Text("A simple way to see\nhow you’re changing")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(ProofTheme.paperHi.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .padding(.horizontal, ProofTheme.spacingLG)
+                .opacity(visible ? 1 : 0)
+                .offset(y: visible ? 0 : 16)
+
+            Spacer()
+
+            Button {
                 ProofTheme.hapticLight()
                 onNext()
-            }) {
-                Text("Begin setup")
+            } label: {
+                Text("Get started")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(ProofTheme.background)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .modifier(ProofTheme.PrimaryButtonBackground())
             }
-            .buttonStyle(ProofTheme.ProofButtonStyle())
-            .padding(.horizontal, ProofTheme.spacingXL)
+            .padding(.horizontal, ProofTheme.spacingLG)
             .padding(.bottom, ProofTheme.spacingXXL)
-            .accessibilityLabel("Get started with onboarding")
+            .opacity(visible ? 1 : 0)
+            .offset(y: visible ? 0 : 16)
+            .accessibilityLabel("Get started")
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ProofTheme.background)
         .proofDynamicType()
         .onAppear {
-            withAnimation(.easeOut(duration: ProofTheme.animationEntrance)) {
-                titleVisible = true
-            }
-            withAnimation(.easeOut(duration: ProofTheme.animationEntrance).delay(ProofTheme.staggerShort)) {
-                iconVisible = true
-            }
-            withAnimation(.easeOut(duration: ProofTheme.animationEntrance).delay(ProofTheme.staggerDefault)) {
-                subtitleVisible = true
+            withAnimation(.easeOut(duration: 0.7)) {
+                visible = true
             }
         }
     }

@@ -1,6 +1,8 @@
 import AVFoundation
 import SwiftUI
 
+/// Onboarding step 3 — dark world. Voice picker as glass capsule pair, primary CTA
+/// requesting camera permission.
 struct PermissionStep: View {
     @AppStorage("userGender") private var genderRaw = 0
     let onComplete: () -> Void
@@ -12,39 +14,45 @@ struct PermissionStep: View {
             Spacer()
                 .frame(height: ProofTheme.spacingXXL * 2)
 
-            Text("Almost ready")
-                .proofFont(24, weight: .light, relativeTo: .title2)
-                .foregroundStyle(ProofTheme.textPrimary)
-                .accessibilityAddTraits(.isHeader)
+            VStack(spacing: ProofTheme.spacingSM) {
+                Text("PERMISSIONS")
+                    .font(.system(size: 11, weight: .medium))
+                    .tracking(3)
+                    .foregroundStyle(ProofTheme.textTertiary)
 
-            Text("We need camera access to capture\nyour progress photos.")
-                .proofFont(15, weight: .light, relativeTo: .body)
-                .foregroundStyle(ProofTheme.textSecondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(6)
-                .padding(.top, ProofTheme.spacingMD)
+                Text("Almost ready")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundStyle(ProofTheme.paperHi)
+                    .accessibilityAddTraits(.isHeader)
+
+                Text("Camera access lets Checkd guide and save your check-ins.")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(ProofTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
+            }
 
             Spacer()
 
-            // Voice choice
-            VStack(spacing: ProofTheme.spacingSM) {
-                Text("Guide voice")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
+            VStack(spacing: ProofTheme.spacingMD) {
+                Text("GUIDE VOICE")
+                    .font(.system(size: 11, weight: .medium))
+                    .tracking(3)
                     .foregroundStyle(ProofTheme.textTertiary)
 
-                HStack(spacing: ProofTheme.spacingMD) {
-                    voiceButton(label: "Male", value: 0)
-                    voiceButton(label: "Female", value: 1)
+                HStack(spacing: 12) {
+                    voicePill(label: "Male", value: 0)
+                    voicePill(label: "Female", value: 1)
                 }
             }
-            .padding(.horizontal, ProofTheme.spacingXL)
+            .padding(.horizontal, ProofTheme.spacingLG)
 
             Spacer()
 
             if permissionDenied {
-                VStack(spacing: ProofTheme.spacingMD) {
-                    Text("Camera access is required.\nEnable it in Settings to continue.")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
+                VStack(spacing: ProofTheme.spacingSM) {
+                    Text("Camera access required.\nEnable it in Settings.")
+                        .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(ProofTheme.statusPoor)
                         .multilineTextAlignment(.center)
 
@@ -55,25 +63,35 @@ struct PermissionStep: View {
                         }
                     } label: {
                         Text("Open Settings")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(ProofTheme.paperHi)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .modifier(ProofTheme.SecondaryButtonBackground())
                     }
-                    .buttonStyle(ProofTheme.ProofSecondaryButtonStyle())
-                    .padding(.horizontal, ProofTheme.spacingXL)
+                    .padding(.horizontal, ProofTheme.spacingLG)
                     .accessibilityLabel("Open Settings to grant camera access")
                 }
                 .padding(.bottom, ProofTheme.spacingMD)
             }
 
-            Button(action: {
+            Button {
                 ProofTheme.hapticLight()
                 Task { await requestCameraAccess() }
-            }) {
+            } label: {
                 Text("Continue")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(ProofTheme.background)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .modifier(ProofTheme.PrimaryButtonBackground())
             }
-            .buttonStyle(ProofTheme.ProofButtonStyle())
-            .padding(.horizontal, ProofTheme.spacingXL)
+            .padding(.horizontal, ProofTheme.spacingLG)
             .padding(.bottom, ProofTheme.spacingXXL)
             .accessibilityLabel("Grant camera access and continue")
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ProofTheme.background)
         .proofDynamicType()
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             guard permissionDenied else { return }
@@ -107,7 +125,7 @@ struct PermissionStep: View {
         }
     }
 
-    private func voiceButton(label: String, value: Int) -> some View {
+    private func voicePill(label: String, value: Int) -> some View {
         let isSelected = genderRaw == value
         return Button {
             ProofTheme.hapticLight()
@@ -117,27 +135,33 @@ struct PermissionStep: View {
         } label: {
             HStack(spacing: ProofTheme.spacingSM) {
                 Text(label)
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(isSelected ? ProofTheme.background : ProofTheme.textPrimary)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isSelected ? ProofTheme.background : ProofTheme.paperHi)
 
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .light))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(ProofTheme.background)
                         .transition(.opacity)
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 52)
-            .background(isSelected ? ProofTheme.accent : ProofTheme.surface)
-            .overlay(
-                RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                    .strokeBorder(isSelected ? Color.clear : ProofTheme.separator, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .frame(height: 52)
+            .background(voicePillBackground(isSelected: isSelected))
         }
         .accessibilityLabel("\(label) voice")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func voicePillBackground(isSelected: Bool) -> some View {
+        if isSelected {
+            Capsule().fill(ProofTheme.paperHi)
+        } else if #available(iOS 26, *) {
+            Capsule().fill(.clear).glassEffect(.regular, in: .capsule)
+        } else {
+            Capsule().fill(ProofTheme.surface)
+                .overlay(Capsule().stroke(ProofTheme.paperHi.opacity(0.08), lineWidth: 1))
+        }
     }
 }
