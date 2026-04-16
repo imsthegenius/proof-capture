@@ -1,290 +1,260 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
-struct HistoryView: View {
+/// Albums tab — light/cream "paper" surface, 3-column grid of session thumbnails,
+/// each cell paginates through Front → Side → Back. Replaces the prior dark list-based History.
+struct AlbumsView: View {
     @Query(
         filter: #Predicate<PhotoSession> { $0.isComplete },
         sort: \PhotoSession.date,
         order: .reverse
     ) private var sessions: [PhotoSession]
-    @Environment(\.modelContext) private var modelContext
-    @State private var sessionToDelete: PhotoSession?
-    @State private var showDeleteConfirmation = false
-    @State private var isCompareMode = false
-    @State private var compareSelections: [PhotoSession] = []
-    @State private var visibleRows: Set<UUID> = []
+
+    @State private var selectedMonth: Date = .now
+    @State private var sessionForReview: PhotoSession?
+
+    private let columns: [GridItem] = Array(
+        repeating: GridItem(.flexible(), spacing: 4),
+        count: 3
+    )
 
     private var calendar: Calendar { .autoupdatingCurrent }
-    private var earliestSessionDate: Date? { sessions.last?.date }
+
+    private var filteredSessions: [PhotoSession] {
+        sessions.filter { calendar.isDate($0.date, equalTo: selectedMonth, toGranularity: .month) }
+    }
+
+    private var monthLabel: String {
+        selectedMonth.formatted(.dateTime.month(.wide))
+    }
 
     var body: some View {
-        Group {
-            if sessions.isEmpty {
-                emptyState
-            } else {
-                sessionList
-            }
-        }
-        .proofDynamicType()
-        .background(ProofTheme.background)
-        .navigationTitle("History")
-        .navigationBarTitleDisplayMode(.inline)
-        .alert("Delete Session", isPresented: $showDeleteConfirmation) {
-            Button("Delete", role: .destructive) {
-                if let session = sessionToDelete {
-                    deleteSession(session)
+        ZStack {
+            paperBackground
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                header
+
+                if filteredSessions.isEmpty {
+                    emptyState
+                } else {
+                    grid
                 }
             }
-            Button("Cancel", role: .cancel) {
-                sessionToDelete = nil
+            .padding(.bottom, 80)
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .sheet(item: $sessionForReview) { session in
+            NavigationStack {
+                ReviewView(session: session)
             }
-        } message: {
-            Text("This session and its photos will be permanently deleted.")
         }
     }
 
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        VStack {
-            Spacer()
-
-            VStack(spacing: ProofTheme.spacingXS) {
-                Text("0")
-                    .proofFont(48, weight: .ultraLight, relativeTo: .largeTitle)
-                    .foregroundStyle(ProofTheme.accent)
-
-                Text("sessions")
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textSecondary)
-            }
-
-            Spacer()
-
-            NavigationLink(destination: SessionView()) {
-                Text("Start your first session")
-            }
-            .buttonStyle(ProofTheme.ProofButtonStyle())
-            .accessibilityLabel("Start your first photo session")
-            .padding(.horizontal, ProofTheme.spacingMD)
-            .padding(.bottom, ProofTheme.spacingXL)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    // MARK: - Session List
-
-    private var sessionList: some View {
-        List {
-            if sessions.count >= 2 {
-                Section {
-                    if isCompareMode {
-                        VStack(spacing: ProofTheme.spacingSM) {
-                            Text("Select 2 sessions to compare")
-                                .proofFont(13, weight: .light, relativeTo: .footnote)
-                                .foregroundStyle(ProofTheme.textTertiary)
-
-                            if compareSelections.count == 2 {
-                                NavigationLink(destination: ComparisonView(
-                                    sessionA: compareSelections[0],
-                                    sessionB: compareSelections[1]
-                                )) {
-                                    Text("Compare")
-                                }
-                                .buttonStyle(ProofTheme.ProofButtonStyle())
-                            }
-
-                            Button {
-                                isCompareMode = false
-                                compareSelections = []
-                            } label: {
-                                Text("Cancel")
-                                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                                    .foregroundStyle(ProofTheme.textTertiary)
-                            }
-                        }
-                        .frame(height: 88)
-                    } else {
-                        Button {
-                            isCompareMode = true
-                            compareSelections = []
-                        } label: {
-                            HStack(spacing: ProofTheme.spacingMD) {
-                                Image(systemName: "arrow.left.and.right")
-                                    .font(.system(size: 15, weight: .light))
-                                    .foregroundStyle(ProofTheme.accent)
-
-                                Text("Compare sessions")
-                                    .proofFont(15, weight: .light, relativeTo: .body)
-                                    .foregroundStyle(ProofTheme.textSecondary)
-                            }
-                            .frame(minHeight: 44)
-                        }
-                        .accessibilityLabel("Compare two sessions")
-                    }
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: ProofTheme.spacingMD, bottom: 0, trailing: ProofTheme.spacingMD))
-            }
-
-            Section {
-                ForEach(sessions) { session in
-                    if isCompareMode {
-                        Button {
-                            toggleCompareSelection(session)
-                        } label: {
-                            HStack(alignment: .top, spacing: ProofTheme.spacingSM) {
-                                sessionRow(session)
-
-                                if compareSelections.contains(where: { $0.id == session.id }) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 20, weight: .light))
-                                        .foregroundStyle(ProofTheme.accent)
-                                } else {
-                                    Image(systemName: "circle")
-                                        .font(.system(size: 20, weight: .ultraLight))
-                                        .foregroundStyle(ProofTheme.textTertiary)
-                                }
-                            }
-                        }
-                        .accessibilityLabel(historyAccessibilityLabel(for: session, action: "Select"))
-                        .modifier(RowRevealModifier(isVisible: visibleRows.contains(session.id)))
-                        .onAppear { scheduleRowReveal(for: session) }
-                    } else {
-                        NavigationLink(destination: ReviewView(session: session)) {
-                            sessionRow(session)
-                        }
-                        .accessibilityLabel(historyAccessibilityLabel(for: session))
-                        .modifier(RowRevealModifier(isVisible: visibleRows.contains(session.id)))
-                        .onAppear { scheduleRowReveal(for: session) }
-                    }
-                }
-                .onDelete { indexSet in
-                    guard !isCompareMode else { return }
-                    if let index = indexSet.first {
-                        sessionToDelete = sessions[index]
-                        showDeleteConfirmation = true
-                    }
-                }
-                .deleteDisabled(isCompareMode)
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-    }
-
-    // MARK: - Session Row
-
-    private func sessionRow(_ session: PhotoSession) -> some View {
-        VStack(alignment: .leading, spacing: ProofTheme.spacingMD) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Week \(weekIndex(for: session))")
-                    .proofFont(12, weight: .light, relativeTo: .caption1)
-                    .tracking(1.8)
-                    .foregroundStyle(ProofTheme.textTertiary)
-
-                Text(session.date.formatted(.dateTime.month(.abbreviated).day().year()))
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textPrimary)
-            }
-
-            HStack(spacing: 2) {
-                ForEach(Pose.allCases) { pose in
-                    sessionPhotoTile(session, pose: pose)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
-        }
-        .padding(ProofTheme.spacingLG)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ProofTheme.surface.opacity(0.88))
-        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusLG))
-        .overlay(
-            RoundedRectangle(cornerRadius: ProofTheme.radiusLG)
-                .stroke(ProofTheme.separator, lineWidth: 1)
+    private var paperBackground: some View {
+        LinearGradient(
+            colors: [ProofTheme.paperHi, ProofTheme.paperLo],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
         )
     }
 
+    private var header: some View {
+        VStack(alignment: .leading, spacing: ProofTheme.spacingMD) {
+            HStack(alignment: .center) {
+                Text("Albums")
+                    .font(.system(size: 40, weight: .medium))
+                    .foregroundStyle(ProofTheme.inkPrimary)
+
+                Spacer()
+
+                NavigationLink(destination: SettingsView()) {
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 24, weight: .regular))
+                        .foregroundStyle(ProofTheme.inkPrimary)
+                }
+                .accessibilityLabel("Profile and settings")
+            }
+
+            monthPill
+        }
+        .padding(.horizontal, ProofTheme.spacingMD)
+        .padding(.top, ProofTheme.spacingMD)
+    }
+
+    private var monthPill: some View {
+        Menu {
+            ForEach(monthOptions, id: \.self) { month in
+                Button {
+                    withAnimation(.easeInOut(duration: ProofTheme.animationFast)) {
+                        selectedMonth = month
+                    }
+                } label: {
+                    Text(month.formatted(.dateTime.month(.wide).year()))
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(monthLabel)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(ProofTheme.inkPrimary)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(ProofTheme.inkSoft)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(monthPillBackground)
+        }
+        .accessibilityLabel("Filter by month, currently \(monthLabel)")
+    }
+
     @ViewBuilder
-    private func sessionPhotoTile(_ session: PhotoSession, pose: Pose) -> some View {
-        if let image = session.photo(for: pose) {
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity)
-                .frame(height: 140)
-                .clipped()
-                .accessibilityLabel("\(pose.title) photo")
+    private var monthPillBackground: some View {
+        if #available(iOS 26, *) {
+            Capsule()
+                .fill(.clear)
+                .glassEffect(.regular, in: .capsule)
         } else {
-            Rectangle()
-                .fill(ProofTheme.surface)
-                .frame(maxWidth: .infinity)
-                .frame(height: 140)
-                .accessibilityLabel("\(pose.title) photo missing")
+            Capsule()
+                .fill(.ultraThinMaterial)
         }
     }
 
-    private func weekIndex(for session: PhotoSession) -> Int {
-        guard let earliest = earliestSessionDate else { return 1 }
-
-        let start = calendar.startOfDay(for: earliest)
-        let current = calendar.startOfDay(for: session.date)
-        let dayOffset = max(0, calendar.dateComponents([.day], from: start, to: current).day ?? 0)
-        return (dayOffset / 7) + 1
+    private var monthOptions: [Date] {
+        guard !sessions.isEmpty else { return [.now] }
+        let dates = sessions.map { calendar.startOfMonth(for: $0.date) }
+        return Array(Set(dates)).sorted(by: >)
     }
 
-    private func historyAccessibilityLabel(for session: PhotoSession, action: String = "Session") -> String {
-        let date = session.date.formatted(.dateTime.month(.abbreviated).day().year())
-        return "\(action) week \(weekIndex(for: session)), \(date)"
-    }
-
-    private func scheduleRowReveal(for session: PhotoSession) {
-        let index = sessions.firstIndex(where: { $0.id == session.id }) ?? 0
-        let delay = min(Double(index) * ProofTheme.staggerShort, ProofTheme.staggerLong)
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(Int(delay * 1000)))
-            guard !Task.isCancelled else { return }
-            visibleRows.insert(session.id)
+    private var grid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 4) {
+                ForEach(filteredSessions) { session in
+                    AlbumCell(session: session) {
+                        sessionForReview = session
+                    }
+                }
+            }
+            .padding(.horizontal, ProofTheme.spacingMD)
+            .padding(.top, ProofTheme.spacingMD)
         }
     }
 
-    // MARK: - Actions
+    private var emptyState: some View {
+        VStack(spacing: ProofTheme.spacingMD) {
+            Spacer()
 
-    private func deleteSession(_ session: PhotoSession) {
-        modelContext.delete(session)
-        sessionToDelete = nil
+            Text("0")
+                .font(.system(size: 64, weight: .medium))
+                .foregroundStyle(ProofTheme.inkPrimary.opacity(0.5))
+
+            Text("sessions in \(monthLabel)")
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(ProofTheme.inkSoft)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct AlbumCell: View {
+    let session: PhotoSession
+    let onTap: () -> Void
+
+    @State private var selectedPoseIndex: Int = 0
+
+    private var poses: [Pose] {
+        Pose.allCases.filter { session.photo(for: $0) != nil }
     }
 
-    private func toggleCompareSelection(_ session: PhotoSession) {
-        if let index = compareSelections.firstIndex(where: { $0.id == session.id }) {
-            compareSelections.remove(at: index)
-        } else if compareSelections.count < 2 {
-            compareSelections.append(session)
-        } else {
-            compareSelections[0] = compareSelections[1]
-            compareSelections[1] = session
+    private var dateLabel: String {
+        session.date.formatted(.dateTime.day().month(.wide))
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            let height = width * (213.0 / 120.0)
+
+            ZStack(alignment: .bottom) {
+                if poses.isEmpty {
+                    placeholderImage
+                        .frame(width: width, height: height)
+                } else {
+                    TabView(selection: $selectedPoseIndex) {
+                        ForEach(Array(poses.enumerated()), id: \.offset) { index, pose in
+                            if let image = session.photo(for: pose) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: width, height: height)
+                                    .clipped()
+                                    .tag(index)
+                            }
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(width: width, height: height)
+                }
+
+                VStack(spacing: 4) {
+                    datePill
+                    pageDots
+                }
+                .padding(.bottom, 8)
+            }
+            .frame(width: width, height: height)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onTap)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Session on \(dateLabel), \(poses.count) of 3 poses")
+            .accessibilityAddTraits(.isButton)
+        }
+        .aspectRatio(120.0 / 213.0, contentMode: .fit)
+    }
+
+    private var placeholderImage: some View {
+        Rectangle()
+            .fill(ProofTheme.paperLo.opacity(0.6))
+    }
+
+    private var datePill: some View {
+        Text(dateLabel)
+            .font(.system(size: 10, weight: .regular))
+            .foregroundStyle(ProofTheme.overlayText)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+            .background(.ultraThinMaterial)
+            .clipShape(Capsule())
+    }
+
+    private var pageDots: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(Pose.allCases.enumerated()), id: \.offset) { index, _ in
+                let hasPhoto = session.photo(for: Pose.allCases[index]) != nil
+                Circle()
+                    .fill(ProofTheme.overlayText.opacity(hasPhoto ? (index == selectedPoseIndex ? 1.0 : 0.3) : 0.1))
+                    .frame(width: 5, height: 5)
+            }
         }
     }
 }
 
-private struct RowRevealModifier: ViewModifier {
-    let isVisible: Bool
+/// Backward-compat alias so any remaining references to HistoryView resolve to AlbumsView.
+typealias HistoryView = AlbumsView
 
-    func body(content: Content) -> some View {
-        content
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: ProofTheme.spacingMD, bottom: 0, trailing: ProofTheme.spacingMD))
-            .listRowSeparator(.hidden)
-            .opacity(isVisible ? 1 : 0)
-            .offset(y: isVisible ? 0 : 12)
-            .animation(.easeOut(duration: ProofTheme.animationFast), value: isVisible)
+private extension Calendar {
+    func startOfMonth(for date: Date) -> Date {
+        let components = dateComponents([.year, .month], from: date)
+        return self.date(from: components) ?? date
     }
 }
 
 #Preview {
-    NavigationStack {
-        HistoryView()
-    }
-    .preferredColorScheme(.dark)
+    AlbumsView()
+        .modelContainer(for: PhotoSession.self, inMemory: true)
 }

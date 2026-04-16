@@ -147,7 +147,8 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
     //
     // CALIBRATION NOTES (2026-04-04, TWO-478 TWO-515)
     // ─────────────────────────────────────────────────────────
-    // Tested against scripts/test-images/ (13 standing progress photos).
+    // Baseline distance heuristics originally came from the legacy static suite,
+    // now tracked as validation-only edge cases in scripts/edge-cases/.
     // Target setup: phone propped at waist-to-chest height, user 6-8 ft away.
     //
     // Observed body heights (Vision normalized skeleton span):
@@ -211,7 +212,8 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
     //
     // CALIBRATION NOTES (2026-04-04, TWO-476 TWO-517)
     // ─────────────────────────────────────────────────────────
-    // Tested against scripts/test-images/ (13 standing progress photos).
+    // Baseline orientation heuristics originally came from the legacy static
+    // suite, now tracked as validation-only edge cases in scripts/edge-cases/.
     //
     // Front detection:
     //   noseConf threshold lowered 0.30 → 0.15 for primary path.
@@ -336,22 +338,27 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
             return true
         }
 
-        // Wrist near hip height (Y within 8% of frame)
-        let leftYOK = abs(leftWrist.location.y - leftHip.location.y) < 0.08
-        let rightYOK = abs(rightWrist.location.y - rightHip.location.y) < 0.08
+        // Wrist below hip but not at knee level (Y within 20% of frame).
+        // Natural hanging arms place wrists around mid-thigh; wider deltas
+        // usually indicate raised, crossed, or braced arms.
+        let leftYOK = abs(leftWrist.location.y - leftHip.location.y) < 0.20
+        let rightYOK = abs(rightWrist.location.y - rightHip.location.y) < 0.20
 
-        // Wrist horizontally near hip (X within 6% of frame)
-        let leftXOK = abs(leftWrist.location.x - leftHip.location.x) < 0.06
-        let rightXOK = abs(rightWrist.location.x - rightHip.location.x) < 0.06
+        // Wrist horizontally near hip (X within 18% of frame). Larger offsets
+        // usually indicate hands on hips or outward arm tension.
+        let leftXOK = abs(leftWrist.location.x - leftHip.location.x) < 0.18
+        let rightXOK = abs(rightWrist.location.x - rightHip.location.x) < 0.18
 
-        // Elbow angle check — arms at sides should be ~160-180 degrees
+        // Elbow angle — relaxed arms are 130-180°, flexed arms are 80-110°.
+        // Old 150° floor failed natural slight bends (130-150° is common).
+        // 120° catches true flexion while passing natural stance.
         if let leftElbow = try? observation.recognizedPoint(.leftElbow),
            let leftShoulder = try? observation.recognizedPoint(.leftShoulder),
            leftElbow.confidence > 0.3, leftShoulder.confidence > 0.3 {
             let angle = angleBetween(
                 p1: leftShoulder.location, vertex: leftElbow.location, p2: leftWrist.location
             )
-            if angle < 150 { return false }
+            if angle < 120 { return false }
         }
 
         return leftYOK && rightYOK && leftXOK && rightXOK

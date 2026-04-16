@@ -72,18 +72,18 @@ private struct DataErrorView: View {
     var body: some View {
         VStack(spacing: 24) {
             Text("Data Error")
-                .font(.system(size: 24, weight: .light))
+                .font(.system(size: 24, weight: .regular))
                 .foregroundStyle(ProofTheme.textPrimary)
 
             Text("Unable to initialize local storage. Please restart the app or reinstall if the problem persists.")
-                .font(.system(size: 15, weight: .light))
+                .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(ProofTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
             Button(action: retryAction) {
                 Text("Try Again")
-                    .font(.system(size: 15, weight: .light))
+                    .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(ProofTheme.background)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)

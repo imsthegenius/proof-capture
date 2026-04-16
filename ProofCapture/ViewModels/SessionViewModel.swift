@@ -5,10 +5,17 @@ import UIKit
 
 enum SessionPhase {
     case positioning
+    case locked
+    case poseHold
     case countdown
     case capturing
     case preview
     case complete
+}
+
+enum CaptureEdgeState: Equatable {
+    case noBodyLong
+    case lensBlocked
 }
 
 @Observable
@@ -18,7 +25,7 @@ final class SessionViewModel {
     var phase: SessionPhase = .positioning
     var capturedImages: [Pose: UIImage] = [:]
     var qualityReports: [Pose: PhotoQualityGate.Report] = [:]
-    var countdownValue: Int = 5
+    var countdownValue: Int = 3
     var showAbortConfirmation = false
     var retakePose: Pose?
     var isRetaking = false
@@ -28,6 +35,12 @@ final class SessionViewModel {
     var showCompleteContent = false
     var hasBootstrappedSession = false
     var activeSession: PhotoSession?
+
+    // Burst review (iOS26 slide-up sheet shown after capture, before next pose).
+    var currentBurst: [UIImage] = []
+    var selectedBurstIndex: Int = 0
+    var showBurstReview: Bool = false
+    var captureEdgeState: CaptureEdgeState?
 
     var cameraManager = CameraManager()
     var poseDetector = PoseDetector()
@@ -77,6 +90,7 @@ final class SessionViewModel {
         hasBootstrappedSession = true
         showCompleteContent = false
         captureFlashOpacity = 0
+        captureEdgeState = nil
 
         restoreDraftIfNeeded(modelContext: modelContext)
         poseDetector.targetPose = currentPose
@@ -145,6 +159,7 @@ final class SessionViewModel {
         if phase != .complete {
             phase = .positioning
         }
+        captureEdgeState = nil
 
         persistSessionState()
     }
@@ -152,28 +167,55 @@ final class SessionViewModel {
     func monitorReadiness() async {
         var readyDuration: TimeInterval = 0
         var timeSinceLastGuidance: TimeInterval = 0
+        var noBodyDuration: TimeInterval = 0
+        var darkNoBodyDuration: TimeInterval = 0
         let checkInterval: TimeInterval = 0.25
         let requiredDuration: TimeInterval = 0.3
         let guidanceInterval: TimeInterval = 4.0
+        let noBodyThreshold: TimeInterval = 8.0
+        let lensBlockedThreshold: TimeInterval = 2.0
 
         while !Task.isCancelled && phase == .positioning {
             if captureStatusMessage != nil || !cameraManager.isRunning {
                 readyDuration = 0
+                noBodyDuration = 0
+                darkNoBodyDuration = 0
+                captureEdgeState = nil
                 try? await Task.sleep(for: .milliseconds(Int(checkInterval * 1000)))
                 continue
+            }
+
+            if poseDetector.bodyDetected {
+                noBodyDuration = 0
+                darkNoBodyDuration = 0
+                captureEdgeState = nil
+            } else {
+                noBodyDuration += checkInterval
+                darkNoBodyDuration = lightingAnalyzer.brightness < 0.05
+                    ? darkNoBodyDuration + checkInterval
+                    : 0
+
+                if darkNoBodyDuration >= lensBlockedThreshold {
+                    captureEdgeState = .lensBlocked
+                } else if noBodyDuration >= noBodyThreshold {
+                    captureEdgeState = .noBodyLong
+                } else {
+                    captureEdgeState = nil
+                }
             }
 
             if poseDetector.isReady && lightingAnalyzer.quality != .poor {
                 readyDuration += checkInterval
                 if readyDuration >= requiredDuration {
-                    await beginCountdown()
+                    captureEdgeState = nil
+                    await beginLockSequence()
                     return
                 }
             } else {
                 readyDuration = 0
 
                 timeSinceLastGuidance += checkInterval
-                if timeSinceLastGuidance >= guidanceInterval {
+                if timeSinceLastGuidance >= guidanceInterval, captureEdgeState != .lensBlocked {
                     timeSinceLastGuidance = 0
                     await audioGuide.speakPositionGuidance(
                         bodyDetected: poseDetector.bodyDetected,
@@ -191,11 +233,30 @@ final class SessionViewModel {
         }
     }
 
-    func beginCountdown() async {
+    func beginLockSequence() async {
         guard phase == .positioning, captureStatusMessage == nil else { return }
         audioGuide.stop()
+        captureEdgeState = nil
+        phase = .locked
+
+        Task {
+            await audioGuide.speakLockAchieved()
+        }
+
+        try? await Task.sleep(for: .milliseconds(800))
+        guard phase == .locked else { return }
+
+        phase = .poseHold
+        try? await Task.sleep(for: .seconds(3))
+        guard phase == .poseHold else { return }
+
+        await beginCountdown()
+    }
+
+    func beginCountdown() async {
+        guard phase == .poseHold, captureStatusMessage == nil else { return }
         phase = .countdown
-        countdownValue = UserPreferences.countdownSeconds
+        countdownValue = 3
 
         for value in stride(from: countdownValue, through: 1, by: -1) {
             guard phase == .countdown else { return }
@@ -214,36 +275,82 @@ final class SessionViewModel {
 
         let burst = await cameraManager.captureBurst(count: 7)
         let pose = currentPose
-        if let best = await BurstSelector.selectBest(from: burst, pose: pose) {
-            capturedImages[pose] = best
-        } else if let first = burst.first {
-            capturedImages[pose] = first
+
+        // Retain the full burst for the iOS26 slide-up review sheet.
+        currentBurst = burst
+        selectedBurstIndex = 0
+
+        if let best = await BurstSelector.selectBest(from: burst, pose: pose),
+           let bestIndex = burst.firstIndex(where: { $0 === best }) {
+            selectedBurstIndex = bestIndex
         }
 
         await flashTask.value
 
-        guard let savedImage = capturedImages[pose] else {
+        guard !burst.isEmpty else {
             phase = .positioning
+            currentBurst = []
+            captureEdgeState = .noBodyLong
             return
         }
 
-        // Run quality gate in background — does not block preview
+        ProofTheme.hapticSuccess()
+        phase = .preview
+        showBurstReview = true
+    }
+
+    /// Called from the burst review sheet when the user taps "Use this shot".
+    /// Commits the selected burst frame, persists, and advances to the next pose.
+    func confirmBurstSelection() async {
+        guard !currentBurst.isEmpty else { return }
+        let pose = currentPose
+        let chosen = currentBurst[selectedBurstIndex]
+        capturedImages[pose] = chosen
+
+        // Quality gate runs in background — never blocks the user.
         Task {
-            let report = await PhotoQualityGate.assess(image: savedImage, pose: pose)
+            let report = await PhotoQualityGate.assess(image: chosen, pose: pose)
             self.qualityReports[pose] = report
         }
 
-        let resumePose = allRequiredPhotosCaptured ? currentPose : (currentPose.next ?? currentPose)
-
-        ProofTheme.hapticSuccess()
-        checkmarkProgress = 0
-        photoScale = 1.03
-        phase = .preview
+        let resumePose = allRequiredPhotosCaptured ? pose : (pose.next ?? pose)
         persistSessionState(resumePose: resumePose)
 
         if allRequiredPhotosCaptured {
             cameraManager.stopSession()
         }
+
+        showBurstReview = false
+        currentBurst = []
+        selectedBurstIndex = 0
+
+        if isRetaking {
+            isRetaking = false
+            await enterCompletePhase(playAnnouncement: false)
+            persistSessionState()
+            return
+        }
+
+        if let next = pose.next {
+            currentPose = next
+            poseDetector.targetPose = next
+            phase = .positioning
+            captureEdgeState = nil
+            await audioGuide.speakPoseTransition(from: pose, to: next)
+        } else {
+            await enterCompletePhase(playAnnouncement: true)
+            persistSessionState()
+        }
+    }
+
+    /// Called from the burst review sheet when the user taps "Redo".
+    /// Discards the burst and returns to positioning for the same pose.
+    func redoBurst() {
+        showBurstReview = false
+        currentBurst = []
+        selectedBurstIndex = 0
+        phase = .positioning
+        captureEdgeState = nil
     }
 
     func triggerCaptureFlash() async {
@@ -255,29 +362,6 @@ final class SessionViewModel {
 
         withAnimation(.easeOut(duration: 0.22)) {
             captureFlashOpacity = 0
-        }
-    }
-
-    func autoAdvanceAfterPreview() async {
-        try? await Task.sleep(for: .seconds(2))
-        guard phase == .preview else { return }
-
-        if isRetaking {
-            isRetaking = false
-            await enterCompletePhase(playAnnouncement: false)
-            persistSessionState()
-            return
-        }
-
-        if let next = currentPose.next {
-            let previousPose = currentPose
-            currentPose = next
-            poseDetector.targetPose = next
-            phase = .positioning
-            await audioGuide.speakPoseTransition(from: previousPose, to: next)
-        } else {
-            await enterCompletePhase(playAnnouncement: true)
-            persistSessionState()
         }
     }
 
@@ -320,6 +404,7 @@ final class SessionViewModel {
         currentPose = pose
         poseDetector.targetPose = pose
         phase = .positioning
+        captureEdgeState = nil
         persistSessionState(resumePose: pose)
         await resumeCapturePipeline(playPrompt: true)
     }

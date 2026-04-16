@@ -36,7 +36,7 @@ struct FullPhotoView: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .light))
+                    .font(.system(size: 17, weight: .regular))
                     .foregroundStyle(ProofTheme.overlayText)
                     .frame(width: 44, height: 44)
                     .background(ProofTheme.overlayPill)
