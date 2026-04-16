@@ -165,6 +165,7 @@ guard CommandLine.arguments.count >= 2 else {
 
 let albumPath = (CommandLine.arguments[1] as NSString).expandingTildeInPath
 let albumURL = URL(fileURLWithPath: albumPath)
+let canonicalAlbumPath = albumURL.resolvingSymlinksInPath().path
 let fileManager = FileManager.default
 
 var isDirectory: ObjCBool = false
@@ -183,10 +184,11 @@ let enumerator = fileManager.enumerator(
 
 var imageURLs: [URL] = []
 while let item = enumerator?.nextObject() as? URL {
-    guard supportedExtensions.contains(item.pathExtension.lowercased()) else { continue }
-    let values = try? item.resourceValues(forKeys: [.isRegularFileKey])
+    let resolvedItem = item.resolvingSymlinksInPath()
+    guard supportedExtensions.contains(resolvedItem.pathExtension.lowercased()) else { continue }
+    let values = try? resolvedItem.resourceValues(forKeys: [.isRegularFileKey])
     guard values?.isRegularFile == true else { continue }
-    imageURLs.append(item)
+    imageURLs.append(resolvedItem)
 }
 
 imageURLs.sort { $0.path.localizedCaseInsensitiveCompare($1.path) == .orderedAscending }
@@ -197,7 +199,7 @@ var includedURLs: [URL] = []
 var indexByPath: [String: Int] = [:]
 
 for url in imageURLs {
-    let relativePath = url.path.replacingOccurrences(of: albumURL.path + "/", with: "")
+    let relativePath = url.path.replacingOccurrences(of: canonicalAlbumPath + "/", with: "")
     let canonical = canonicalStem(for: url)
 
     if let reason = exclusionReason(for: url) {
