@@ -22,4 +22,11 @@ All images sourced from [Unsplash](https://unsplash.com) under the [Unsplash Lic
 
 - **v3 (2026-04-04)**: Trimmed to 11 images (5 front, 3 side, 3 back) to meet 3-5 per pose. Added backlit-window (`front_window_poor`) and back studio pose (`back_studio_good`). Removed redundant front images.
 - **v2 (2026-04-04)**: Replaced gym action shots with standing progress photo representatives. Added `{pose}_{lighting}_{quality}` naming convention.
-- **v1**: 13 images, mostly gym action shots (deadlifts, push-ups, dumbbell curls). Did not represent the Proof Capture use case.
+- **v1**: 13 images, mostly gym action shots (deadlifts, push-ups, dumbbell curls). Did not represent the Checkd use case.
+
+## Current Role
+
+This folder is validation-only. These images preserve known failure modes and
+dataset contamination examples such as mirror selfies, stage poses, studio
+backgrounds, and strong backlight silhouettes. They do not drive production
+threshold calibration.

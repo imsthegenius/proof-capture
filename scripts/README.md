@@ -1,22 +1,44 @@
-# Proof Capture — Lighting & Pose Analysis Test Harness
+# Checkd — Lighting & Pose Analysis Harness
 
-Standalone macOS script that runs the exact same lighting + pose analysis pipeline from the Proof Capture app against static image files. Used for regression testing lighting calibration changes.
+Standalone macOS script that runs the same live lock scoring pipeline as the app
+against static image files. Used for regression testing and calibration reports.
 
 ## Usage
 
 ```bash
-swift scripts/analyze-photo.swift scripts/test-images/*.jpg
+swift scripts/analyze-photo.swift scripts/edge-cases/*.jpg
 ```
 
 Or analyze a single image:
 
 ```bash
-swift scripts/analyze-photo.swift scripts/test-images/front_directional_good.jpg
+swift scripts/analyze-photo.swift scripts/edge-cases/front_directional_good.jpg
 ```
 
-## Test Images
+Generate structured output for reports:
 
-11 Unsplash images of **standing persons** covering three poses and the full lighting spectrum. Most images represent the actual Proof use case — a person standing upright in conditions a coaching client would encounter at home or in a gym. Two edge-case images (`front_window_poor`, `back_studio_good`) use tighter framing to test failure modes.
+```bash
+swift scripts/analyze-photo.swift --format json scripts/edge-cases/*.jpg
+swift scripts/analyze-photo.swift --format csv scripts/edge-cases/*.jpg
+```
+
+Audit the local album and generate a local-only manifest beside it:
+
+```bash
+swift scripts/audit-calibration-album.swift ~/Downloads/Client\\ Pictures
+```
+
+## Edge Cases
+
+`scripts/edge-cases/` contains the committed validation-only suite. These files
+exist to preserve known failure modes and guard against regressions. They never
+drive threshold calibration.
+
+Representative client photos live outside git. The canonical local-only source is:
+
+- `/Users/imraan/Downloads/Client Pictures`
+
+Use [calibration-manifest.template.csv](/Users/imraan/Desktop/proof-capture/scripts/calibration-manifest.template.csv) as the repo-tracked schema for local manifests generated beside the album.
 
 ### Naming Convention
 
@@ -67,7 +89,8 @@ The "Human Assessment" and "Analyzer Lighting" columns intentionally differ in s
 3. **True backlighting is correctly detected** — `back_backlit_poor`, `front_backlit_poor`, and `front_window_poor` correctly flag strong backlight or extreme darkness from backlighting.
 4. **Window backlighting produces zero-joint detection** — `front_window_poor` is a true backlit-window edge case where the person is a pure silhouette. Vision framework cannot detect any body landmarks (0/8 joints), confirming that window backlighting is the worst-case scenario for the pipeline. This image intentionally tests the failure mode, not the happy path.
 
-These mismatches are intentional test data — they define the baseline for tuning heuristic thresholds in later work.
+These mismatches are intentional validation data. They document the failure modes
+the lock scorer must continue to handle while tuning against the local album.
 
 ## What It Measures
 
