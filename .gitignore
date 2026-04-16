@@ -5,3 +5,9 @@ xcuserdata/
 DerivedData/
 .build/
 .DS_Store
+scripts/calibration-corpus/
+scripts/local-manifests/
+scripts/local-reports/
+scripts/*.local.csv
+scripts/*.local.json
+scripts/*.local.md
