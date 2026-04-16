@@ -241,7 +241,7 @@ final class SessionViewModel {
     func beginCountdown() async {
         guard phase == .poseHold, captureStatusMessage == nil else { return }
         phase = .countdown
-        countdownValue = 3
+        countdownValue = UserPreferences.countdownSeconds
 
         for value in stride(from: countdownValue, through: 1, by: -1) {
             guard phase == .countdown else { return }
