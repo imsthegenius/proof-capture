@@ -1,79 +1,78 @@
 import AuthenticationServices
 import SwiftUI
 
+/// Entry screen — dark world. Hero "checkd" wordmark in semibold (matching the
+/// Figma camera-flow display typography), three feature pills in glass capsules
+/// (matching the tab bar pattern), Sign in with Apple at the bottom.
 struct AuthView: View {
     @Environment(AuthManager.self) private var authManager
-    @State private var titleVisible = false
-    @State private var featuresVisible = false
-    @State private var buttonVisible = false
+    @State private var visible = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-                .frame(height: ProofTheme.spacingXXL * 2)
+        ZStack {
+            ProofTheme.background.ignoresSafeArea()
 
-            VStack(spacing: ProofTheme.spacingSM) {
-                Text("PROOF")
-                    .proofFont(60, weight: .ultraLight, relativeTo: .largeTitle, maximumScaleFactor: 1.25)
-                    .tracking(12)
-                    .foregroundStyle(ProofTheme.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) {
+                Spacer()
 
-                Text("Guided progress photos")
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textSecondary)
-            }
-            .opacity(titleVisible ? 1 : 0)
-            .offset(y: titleVisible ? 0 : 8)
+                VStack(spacing: ProofTheme.spacingMD) {
+                    Text("checkd")
+                        .font(.system(size: 58, weight: .medium))
+                        .tracking(1)
+                        .foregroundStyle(ProofTheme.paperHi)
+                        .accessibilityAddTraits(.isHeader)
 
-            Spacer()
-                .frame(height: ProofTheme.spacingXXL)
-
-            VStack(spacing: ProofTheme.spacingXL) {
-                featureRow(icon: "camera.viewfinder", text: "Guided front, side, back poses")
-                featureRow(icon: "waveform", text: "Voice coaching \u{2014} hands-free capture")
-                featureRow(icon: "icloud.and.arrow.up", text: "Private cloud backup")
-            }
-            .padding(.horizontal, ProofTheme.spacingXL)
-            .opacity(featuresVisible ? 1 : 0)
-            .offset(y: featuresVisible ? 0 : 12)
-
-            Spacer()
-
-            VStack(spacing: ProofTheme.spacingMD) {
-                ZStack {
-                    SignInWithAppleButton(.signIn) { request in
-                        authManager.prepareRequest(request)
-                    } onCompletion: { result in
-                        Task { await authManager.handleAppleSignIn(result: result) }
-                    }
-                    .signInWithAppleButtonStyle(.white)
-                    .frame(height: 52)
-                    .clipShape(.capsule)
-                    .accessibilityLabel("Sign in with Apple")
-                    .disabled(authManager.isAuthenticating)
-                    .opacity(authManager.isAuthenticating ? 0.4 : 1)
-
-                    if authManager.isAuthenticating {
-                        ProgressView()
-                            .tint(ProofTheme.textPrimary)
-                    }
+                    Text("GUIDED CHECK-INS")
+                        .font(.system(size: 11, weight: .medium))
+                        .tracking(3)
+                        .foregroundStyle(ProofTheme.textTertiary)
                 }
+                .opacity(visible ? 1 : 0)
+                .offset(y: visible ? 0 : 12)
 
-                Text("Your photos stay private and backed up")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                    .foregroundStyle(ProofTheme.textSecondary)
+                Spacer()
+
+                VStack(spacing: 12) {
+                    featurePill(icon: "camera.viewfinder", text: "Front, side, back")
+                    featurePill(icon: "waveform", text: "Step back. The voice guides you.")
+                    featurePill(icon: "sparkles", text: "Consistent photos you can compare.")
+                }
+                .padding(.horizontal, ProofTheme.spacingLG)
+                .opacity(visible ? 1 : 0)
+                .offset(y: visible ? 0 : 16)
+
+                Spacer()
+
+                VStack(spacing: ProofTheme.spacingMD) {
+                    ZStack {
+                        SignInWithAppleButton(.signIn) { request in
+                            authManager.prepareRequest(request)
+                        } onCompletion: { result in
+                            Task { await authManager.handleAppleSignIn(result: result) }
+                        }
+                        .signInWithAppleButtonStyle(.white)
+                        .frame(height: 56)
+                        .clipShape(.capsule)
+                        .accessibilityLabel("Sign in with Apple")
+                        .disabled(authManager.isAuthenticating)
+                        .opacity(authManager.isAuthenticating ? 0.4 : 1)
+
+                        if authManager.isAuthenticating {
+                            ProgressView().tint(ProofTheme.paperHi)
+                        }
+                    }
+
+                    Text("Photos stay private to you")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(ProofTheme.textTertiary)
+                }
+                .padding(.horizontal, ProofTheme.spacingLG)
+                .padding(.bottom, ProofTheme.spacingXXL)
+                .opacity(visible ? 1 : 0)
+                .offset(y: visible ? 0 : 16)
             }
-            .padding(.horizontal, ProofTheme.spacingXL)
-            .opacity(buttonVisible ? 1 : 0)
-            .offset(y: buttonVisible ? 0 : 12)
-
-            Spacer()
-                .frame(height: ProofTheme.spacingXXL * 2)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .proofDynamicType()
-        .background(ProofTheme.background)
         .alert(
             "Sign In Failed",
             isPresented: Binding(
@@ -81,35 +80,49 @@ struct AuthView: View {
                 set: { if !$0 { authManager.authError = nil } }
             )
         ) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {}
         } message: {
             Text(authManager.authError ?? "")
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                titleVisible = true
-            }
-            withAnimation(.easeOut(duration: 0.6).delay(0.2)) {
-                featuresVisible = true
-            }
-            withAnimation(.easeOut(duration: 0.6).delay(0.4)) {
-                buttonVisible = true
+            withAnimation(.easeOut(duration: 0.7)) {
+                visible = true
             }
         }
     }
 
-    private func featureRow(icon: String, text: String) -> some View {
-        HStack(spacing: ProofTheme.spacingMD) {
+    private func featurePill(icon: String, text: String) -> some View {
+        HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .light))
-                .foregroundStyle(ProofTheme.accent)
-                .frame(width: 28)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(ProofTheme.paperHi)
+                .frame(width: 24)
                 .accessibilityHidden(true)
+
             Text(text)
-                .proofFont(15, weight: .light, relativeTo: .body)
-                .foregroundStyle(ProofTheme.textSecondary)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(ProofTheme.paperHi.opacity(0.9))
+
             Spacer()
         }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(featurePillBackground)
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var featurePillBackground: some View {
+        if #available(iOS 26, *) {
+            Capsule()
+                .fill(.clear)
+                .glassEffect(.regular, in: .capsule)
+        } else {
+            Capsule()
+                .fill(ProofTheme.surface)
+                .overlay(
+                    Capsule().stroke(ProofTheme.paperHi.opacity(0.08), lineWidth: 1)
+                )
+        }
     }
 }

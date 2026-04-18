@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// Settings — cream paper world. Reached from the Albums profile icon and the
+/// Camera tab gear. Same paper gradient and typography vocabulary as AlbumsView,
+/// rows rendered as glass capsule pickers.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthManager.self) private var authManager
@@ -12,159 +15,153 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        List {
-            // Capture settings
-            Section {
-                // Guide voice
-                VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
-                    Text("Guide voice")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
+        ZStack {
+            paperBackground
+                .ignoresSafeArea()
 
-                    HStack(spacing: ProofTheme.spacingSM) {
-                        settingOption(label: "Male", isSelected: genderRaw == 0) { genderRaw = 0 }
-                        settingOption(label: "Female", isSelected: genderRaw == 1) { genderRaw = 1 }
+            ScrollView {
+                VStack(alignment: .leading, spacing: ProofTheme.spacingXL) {
+                    Text("Settings")
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundStyle(ProofTheme.inkPrimary)
+                        .padding(.top, ProofTheme.spacingMD)
+
+                    section(title: "GUIDE VOICE") {
+                        pillRow(["Male", "Female"], selectedIndex: genderRaw) { genderRaw = $0 }
                     }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Voice guide gender")
-                .padding(.vertical, ProofTheme.spacingXS)
 
-                // Guidance mode
-                VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
-                    Text("Guidance mode")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
-
-                    HStack(spacing: ProofTheme.spacingSM) {
-                        settingOption(label: "Voice", isSelected: guidanceMode == 0) { guidanceMode = 0 }
-                        settingOption(label: "Text only", isSelected: guidanceMode == 1) { guidanceMode = 1 }
+                    section(title: "GUIDANCE") {
+                        pillRow(["Voice", "Text"], selectedIndex: guidanceMode) { guidanceMode = $0 }
                     }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Guidance mode selection")
-                .padding(.vertical, ProofTheme.spacingXS)
 
-                // Pose window
-                VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
-                    Text("Pose window")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
-
-                    HStack(spacing: ProofTheme.spacingSM) {
-                        settingOption(label: "3s", isSelected: poseHoldSeconds == 3) { poseHoldSeconds = 3 }
-                        settingOption(label: "5s", isSelected: poseHoldSeconds == 5) { poseHoldSeconds = 5 }
+                    section(title: "POSE WINDOW") {
+                        pillRow(["3s", "5s"], selectedIndex: poseHoldSeconds == 5 ? 1 : 0) {
+                            poseHoldSeconds = $0 == 0 ? 3 : 5
+                        }
                     }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Pose window duration")
-                .padding(.vertical, ProofTheme.spacingXS)
-            } header: {
-                Text("CAPTURE")
-                    .proofFont(12, weight: .light, relativeTo: .caption1)
-                    .foregroundStyle(ProofTheme.textTertiary)
-            }
-            .listRowBackground(ProofTheme.surface)
 
-            // Privacy reassurance
-            Section {
-                privacyRow(text: "Photos stored on-device only")
-                privacyRow(text: "Cloud backup encrypted to your Apple ID")
-                privacyRow(text: "No sharing, no analytics on photo content")
-            } header: {
-                Text("PRIVACY")
-                    .proofFont(12, weight: .light, relativeTo: .caption1)
-                    .foregroundStyle(ProofTheme.textTertiary)
-            }
-            .listRowBackground(ProofTheme.surface)
-
-            // Sign out
-            Section {
-                Button("Sign out") {
-                    Task {
-                        await authManager.signOut()
-                        dismiss()
+                    section(title: "PRIVACY") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            privacyRow("Photos stored on-device only")
+                            privacyRow("Cloud backup encrypted to your Apple ID")
+                            privacyRow("No sharing, no analytics on photo content")
+                        }
                     }
+
+                    Button {
+                        Task {
+                            await authManager.signOut()
+                            dismiss()
+                        }
+                    } label: {
+                        Text("Sign out")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(ProofTheme.statusPoor)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(signOutBackground)
+                    }
+                    .accessibilityLabel("Sign out of your account")
+
+                    VStack(spacing: 4) {
+                        Text("Checkd")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(ProofTheme.inkSoft)
+                        Text("v\(appVersion)")
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(ProofTheme.inkSoft.opacity(0.7))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, ProofTheme.spacingMD)
                 }
-                .foregroundStyle(ProofTheme.statusPoor)
-                .accessibilityLabel("Sign out of your account")
-            }
-            .listRowBackground(ProofTheme.surface)
-
-            // About
-            Section {
-                VStack(spacing: ProofTheme.spacingSM) {
-                    Text("Proof Capture")
-                        .proofFont(15, weight: .light, relativeTo: .body)
-                        .foregroundStyle(ProofTheme.textTertiary)
-
-                    Text("v\(appVersion)")
-                        .proofFont(13, weight: .ultraLight, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
-
-                    Text("Made for fitness coaches and their clients")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, ProofTheme.spacingSM)
-                .listRowBackground(Color.clear)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Proof Capture version \(appVersion). Made for fitness coaches and their clients.")
+                .padding(.horizontal, ProofTheme.spacingMD)
+                .padding(.bottom, 100) // tab bar clearance
             }
         }
-        .scrollContentBackground(.hidden)
+        .toolbar(.hidden, for: .navigationBar)
         .proofDynamicType()
-        .background(ProofTheme.background)
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func settingOption(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            ProofTheme.hapticLight()
-            withAnimation(.easeInOut(duration: 0.2)) {
-                action()
-            }
-        } label: {
-            HStack(spacing: ProofTheme.spacingSM) {
-                Text(label)
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(isSelected ? ProofTheme.background : ProofTheme.textPrimary)
+    private var paperBackground: some View {
+        LinearGradient(
+            colors: [ProofTheme.paperHi, ProofTheme.paperLo],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .light))
-                        .foregroundStyle(ProofTheme.background)
-                        .transition(.opacity)
+    private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .tracking(2.5)
+                .foregroundStyle(ProofTheme.inkSoft.opacity(0.7))
+
+            content()
+        }
+    }
+
+    private func pillRow(_ options: [String], selectedIndex: Int, onSelect: @escaping (Int) -> Void) -> some View {
+        HStack(spacing: 0) {
+            ForEach(Array(options.enumerated()), id: \.offset) { index, label in
+                Button {
+                    ProofTheme.hapticLight()
+                    withAnimation(.easeInOut(duration: ProofTheme.animationFast)) {
+                        onSelect(index)
+                    }
+                } label: {
+                    Text(label)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(index == selectedIndex ? ProofTheme.paperHi : ProofTheme.inkSoft)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(
+                            Capsule()
+                                .fill(index == selectedIndex ? ProofTheme.inkPrimary : Color.clear)
+                                .padding(3)
+                        )
                 }
+                .accessibilityLabel(label)
+                .accessibilityAddTraits(index == selectedIndex ? .isSelected : [])
             }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 44)
-            .background(isSelected ? ProofTheme.accent : ProofTheme.elevated)
-            .overlay(
-                RoundedRectangle(cornerRadius: ProofTheme.radiusSM)
-                    .strokeBorder(isSelected ? Color.clear : ProofTheme.separator, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
         }
-        .accessibilityLabel(label)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .background(pillRowBackground)
     }
 
-    private func privacyRow(text: String) -> some View {
-        Label {
-            Text(text)
-                .proofFont(15, weight: .light, relativeTo: .body)
-                .foregroundStyle(ProofTheme.textSecondary)
-        } icon: {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(ProofTheme.statusGood)
+    @ViewBuilder
+    private var pillRowBackground: some View {
+        if #available(iOS 26, *) {
+            Capsule().fill(.clear).glassEffect(.regular, in: .capsule)
+        } else {
+            Capsule().fill(ProofTheme.paperHi.opacity(0.6))
+                .overlay(Capsule().stroke(ProofTheme.inkSoft.opacity(0.1), lineWidth: 1))
         }
-        .padding(.vertical, ProofTheme.spacingXS)
+    }
+
+    private func privacyRow(_ text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(ProofTheme.statusGood)
+                .accessibilityHidden(true)
+
+            Text(text)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(ProofTheme.inkPrimary.opacity(0.85))
+
+            Spacer(minLength: 0)
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(text)
+    }
+
+    @ViewBuilder
+    private var signOutBackground: some View {
+        if #available(iOS 26, *) {
+            Capsule().fill(.clear).glassEffect(.regular, in: .capsule)
+        } else {
+            Capsule().fill(ProofTheme.paperHi.opacity(0.6))
+                .overlay(Capsule().stroke(ProofTheme.statusPoor.opacity(0.2), lineWidth: 1))
+        }
     }
 }

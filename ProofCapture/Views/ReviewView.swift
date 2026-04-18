@@ -1,6 +1,9 @@
-import SwiftUI
 import Photos
+import SwiftUI
 
+/// Review screen — cream paper world. Shown after a session completes (full review)
+/// and when tapping a session from Albums. Three pose photos as a hero card grid,
+/// session date as the title, glass action capsules at the bottom.
 struct ReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -9,29 +12,21 @@ struct ReviewView: View {
     private let qualityReports: [Pose: PhotoQualityGate.Report]
     private let session: PhotoSession?
     private let isFromHistory: Bool
-    private let onRetake: ((Pose) -> Void)?
     @State private var isSaving = false
     @State private var savedSuccessfully = false
-    @State private var showSaveConfirmation = false
     @State private var showDeleteConfirmation = false
-    @State private var showQualityWarning = false
     @State private var hasAppeared = false
-    @State private var savePulse = false
 
-    // After capture — no session reference, shows "Session Complete"
     init(
         images: [Pose: UIImage],
-        qualityReports: [Pose: PhotoQualityGate.Report] = [:],
-        onRetake: ((Pose) -> Void)? = nil
+        qualityReports: [Pose: PhotoQualityGate.Report] = [:]
     ) {
         self.poseImages = images
         self.qualityReports = qualityReports
         self.session = nil
         self.isFromHistory = false
-        self.onRetake = onRetake
     }
 
-    // From history — has session reference, shows date and delete option
     init(session: PhotoSession) {
         var images: [Pose: UIImage] = [:]
         for pose in Pose.allCases {
@@ -43,330 +38,287 @@ struct ReviewView: View {
         self.qualityReports = [:]
         self.session = session
         self.isFromHistory = true
-        self.onRetake = nil
-    }
-
-    private var warningIssues: [(id: String, pose: Pose, issue: String)] {
-        Pose.allCases.flatMap { pose in
-            (qualityReports[pose]?.issues ?? []).map {
-                (id: "\(pose.title)-\($0)", pose: pose, issue: $0)
-            }
-        }
     }
 
     private var titleText: String {
         if isFromHistory, let session {
-            return session.date.formatted(.dateTime.month(.abbreviated).day().year())
+            return session.date.formatted(.dateTime.day().month(.wide))
         }
-        return "Session Complete"
+        return "Saved in Checkd"
+    }
+
+    private var eyebrowText: String {
+        if isFromHistory {
+            return "ALBUM ENTRY"
+        }
+        return "TODAY"
+    }
+
+    private var qualityIssues: [(pose: Pose, issue: String)] {
+        Pose.allCases.flatMap { pose in
+            (qualityReports[pose]?.issues ?? []).map { (pose: pose, issue: $0) }
+        }
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            titleSection
+        ZStack {
+            paperBackground
+                .ignoresSafeArea()
 
-            Spacer()
-                .frame(height: ProofTheme.spacingLG)
-
-            photoGrid
-                .opacity(hasAppeared ? 1 : 0)
-                .offset(y: hasAppeared ? 0 : 18)
-                .animation(.easeOut(duration: 0.45).delay(0.08), value: hasAppeared)
-
-            if showQualityWarning, !warningIssues.isEmpty {
-                qualityWarningBanner
+            VStack(alignment: .leading, spacing: ProofTheme.spacingLG) {
+                header
                     .padding(.horizontal, ProofTheme.spacingMD)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.top, ProofTheme.spacingMD)
+
+                photoGrid
+                    .padding(.horizontal, ProofTheme.spacingMD)
+
+                if !qualityIssues.isEmpty {
+                    qualityNotes
+                        .padding(.horizontal, ProofTheme.spacingMD)
+                        .transition(.opacity)
+                }
+
+                Spacer(minLength: 0)
+
+                actions
+                    .padding(.horizontal, ProofTheme.spacingMD)
+                    .padding(.bottom, ProofTheme.spacingLG)
             }
-
-            Spacer()
-
-            bottomButtons
-                .padding(.horizontal, ProofTheme.spacingMD)
-                .padding(.bottom, ProofTheme.spacingLG)
-                .opacity(hasAppeared ? 1 : 0)
-                .offset(y: hasAppeared ? 0 : 18)
-                .animation(.easeOut(duration: 0.45).delay(0.16), value: hasAppeared)
+            .opacity(hasAppeared ? 1 : 0)
+            .offset(y: hasAppeared ? 0 : 16)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .proofDynamicType()
-        .background(ProofTheme.background)
         .toolbar(.hidden, for: .navigationBar)
-        .alert("Delete Session", isPresented: $showDeleteConfirmation) {
-            Button("Delete", role: .destructive) {
-                deleteSession()
-            }
+        .alert("Delete session", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) { deleteSession() }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This session and its photos will be permanently deleted.")
         }
         .onAppear {
             guard !hasAppeared else { return }
-            withAnimation(.easeOut(duration: 0.45)) {
-                hasAppeared = true
-            }
-            if !warningIssues.isEmpty {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(600))
-                    withAnimation(.easeOut(duration: 0.35)) {
-                        showQualityWarning = true
-                    }
-                }
-            }
+            withAnimation(.easeOut(duration: 0.5)) { hasAppeared = true }
         }
+        .proofDynamicType()
     }
 
-    // MARK: - Title
-
-    private var titleSection: some View {
-        Text(titleText)
-            .proofFont(24, weight: .light, relativeTo: .title2)
-            .foregroundStyle(ProofTheme.textPrimary)
-            .padding(.top, ProofTheme.spacingXL)
-            .accessibilityAddTraits(.isHeader)
-            .opacity(hasAppeared ? 1 : 0)
-            .offset(y: hasAppeared ? 0 : 12)
-            .animation(.easeOut(duration: 0.45), value: hasAppeared)
+    private var paperBackground: some View {
+        LinearGradient(
+            colors: [ProofTheme.paperHi, ProofTheme.paperLo],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
-    // MARK: - Photo Grid
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(eyebrowText)
+                    .font(.system(size: 11, weight: .medium))
+                    .tracking(2.5)
+                    .foregroundStyle(ProofTheme.inkSoft.opacity(0.7))
 
-    private var photoGrid: some View {
-        GeometryReader { geometry in
-            let interItemSpacing: CGFloat = ProofTheme.spacingSM
-            let totalSpacing = (ProofTheme.spacingMD * 2) + (interItemSpacing * 2)
-            let photoWidth = max(0, (geometry.size.width - totalSpacing) / 3)
-
-            HStack(spacing: interItemSpacing) {
-                ForEach(Array(Pose.allCases.enumerated()), id: \.offset) { index, pose in
-                    photoCell(for: pose, width: photoWidth)
-                        .opacity(hasAppeared ? 1 : 0)
-                        .offset(y: hasAppeared ? 0 : 18)
-                        .scaleEffect(hasAppeared ? 1 : 0.97)
-                        .animation(.easeOut(duration: 0.45).delay(0.08 + (0.06 * Double(index))), value: hasAppeared)
-                }
-            }
-            .padding(.horizontal, ProofTheme.spacingMD)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        }
-    }
-
-    private func photoCell(for pose: Pose, width: CGFloat) -> some View {
-        VStack(spacing: ProofTheme.spacingSM) {
-            if let image = poseImages[pose] {
-                NavigationLink(destination: FullPhotoView(image: image, title: "\(pose.title) progress photo")) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: width, height: width * 1.6)
-                        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-                        .accessibilityLabel("\(pose.title) progress photo, tap to view full screen")
-                }
-            } else {
-                RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                    .fill(ProofTheme.surface)
-                    .frame(width: width, height: width * 1.6)
-                    .overlay(
-                        Text("--")
-                            .proofFont(15, weight: .light, relativeTo: .body)
-                            .foregroundStyle(ProofTheme.textTertiary)
-                    )
-                    .accessibilityLabel("\(pose.title) photo not taken")
+                Text(titleText)
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundStyle(ProofTheme.inkPrimary)
+                    .accessibilityAddTraits(.isHeader)
             }
 
-            Text(pose.title)
-                .proofFont(12, weight: .light, relativeTo: .caption1)
-                .foregroundStyle(ProofTheme.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Bottom Buttons
-
-    private var bottomButtons: some View {
-        VStack(spacing: ProofTheme.spacingSM) {
-            if !isFromHistory {
-                if showSaveConfirmation {
-                    saveConfirmationBanner
-                }
-
-                if isSaving {
-                    Text("Saving\u{2026}")
-                        .proofFont(15, weight: .light, relativeTo: .body)
-                        .foregroundStyle(ProofTheme.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 52)
-                        .modifier(ProofTheme.PrimaryButtonBackground())
-                        .opacity(savePulse ? 1.0 : 0.4)
-                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: savePulse)
-                        .onAppear { savePulse = true }
-                        .onDisappear { savePulse = false }
-                        .accessibilityLabel("Saving photos")
-                } else if savedSuccessfully {
-                    savedStateBadge
-                } else {
-                    Button {
-                        Task { await saveToCamera() }
-                    } label: {
-                        Text("Save to Camera Roll")
-                    }
-                    .buttonStyle(ProofTheme.ProofButtonStyle())
-                    .accessibilityLabel("Save photos to camera roll")
-                }
-            }
+            Spacer()
 
             Button {
                 dismiss()
             } label: {
-                Text("Done")
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textSecondary)
-                    .frame(minHeight: 44)
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(ProofTheme.inkPrimary)
+                    .frame(width: 36, height: 36)
+                    .background(closeBackground)
             }
-            .accessibilityLabel("Close review")
-            .padding(.top, ProofTheme.spacingXS)
+            .accessibilityLabel("Close")
+        }
+    }
 
-            if isFromHistory {
-                Button {
-                    showDeleteConfirmation = true
-                } label: {
-                    Text("Delete Session")
-                        .proofFont(15, weight: .light, relativeTo: .body)
-                        .foregroundStyle(ProofTheme.statusPoor)
-                        .frame(minHeight: 44)
+    @ViewBuilder
+    private var closeBackground: some View {
+        if #available(iOS 26, *) {
+            Circle().fill(.clear).glassEffect(.regular, in: .circle)
+        } else {
+            Circle().fill(ProofTheme.paperHi.opacity(0.6))
+                .overlay(Circle().stroke(ProofTheme.inkSoft.opacity(0.1), lineWidth: 1))
+        }
+    }
+
+    private var photoGrid: some View {
+        GeometryReader { geo in
+            let spacing: CGFloat = 6
+            let cellWidth = (geo.size.width - spacing * 2) / 3
+            let cellHeight = cellWidth * 1.6
+
+            HStack(spacing: spacing) {
+                ForEach(Pose.allCases) { pose in
+                    photoCell(pose: pose, width: cellWidth, height: cellHeight)
                 }
-                .accessibilityLabel("Delete this session")
-                .padding(.top, ProofTheme.spacingXS)
             }
         }
+        .aspectRatio(120.0 / 64.0, contentMode: .fit)
     }
 
-    private var savedStateBadge: some View {
-        HStack(spacing: ProofTheme.spacingSM) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 18, weight: .light))
-                .foregroundStyle(ProofTheme.statusGood)
+    private func photoCell(pose: Pose, width: CGFloat, height: CGFloat) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            if let image = poseImages[pose] {
+                NavigationLink(destination: FullPhotoView(image: image, title: "\(pose.title) photo")) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: width, height: height)
+                        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusLG))
+                        .accessibilityLabel("\(pose.title) progress photo")
+                }
+            } else {
+                RoundedRectangle(cornerRadius: ProofTheme.radiusLG)
+                    .fill(ProofTheme.paperLo.opacity(0.6))
+                    .frame(width: width, height: height)
+                    .overlay(
+                        Text("—")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(ProofTheme.inkSoft.opacity(0.5))
+                    )
+            }
 
-            Text("Saved to Camera Roll")
-                .proofFont(15, weight: .light, relativeTo: .body)
-                .foregroundStyle(ProofTheme.statusGood)
+            Text(pose.title.uppercased())
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(1.5)
+                .foregroundStyle(ProofTheme.paperHi)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+                .padding(8)
+                .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 52)
-        .background(ProofTheme.statusGood.opacity(0.12))
-        .overlay(
-            RoundedRectangle(cornerRadius: ProofTheme.radiusLG)
-                .stroke(ProofTheme.statusGood.opacity(0.25), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusLG))
-        .accessibilityLabel("Photos saved to camera roll")
     }
 
-    private var saveConfirmationBanner: some View {
-        HStack(spacing: ProofTheme.spacingSM) {
-            Image(systemName: "checkmark")
-                .font(.system(size: 15, weight: .light))
-                .foregroundStyle(ProofTheme.statusGood)
-
-            Text("Saved to Photos")
-                .proofFont(13, weight: .light, relativeTo: .footnote)
-                .foregroundStyle(ProofTheme.textSecondary)
-
-            Spacer()
-        }
-        .padding(.horizontal, ProofTheme.spacingMD)
-        .padding(.vertical, ProofTheme.spacingSM)
-        .frame(maxWidth: .infinity)
-        .background(ProofTheme.surface.opacity(0.94))
-        .overlay(
-            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                .stroke(ProofTheme.statusGood.opacity(0.22), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        .accessibilityLabel("Saved successfully")
-    }
-
-    // MARK: - Quality Warning
-
-    private var qualityWarningBanner: some View {
-        VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
-            HStack(spacing: ProofTheme.spacingSM) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 14, weight: .light))
+    private var qualityNotes: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(ProofTheme.statusFair)
 
-                Text("Quality issues detected")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                    .foregroundStyle(ProofTheme.textPrimary)
-
-                Spacer()
-
-                Button {
-                    withAnimation(.easeOut(duration: 0.25)) {
-                        showQualityWarning = false
-                    }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .light))
-                        .foregroundStyle(ProofTheme.textTertiary)
-                        .frame(width: 28, height: 28)
-                }
-                .accessibilityLabel("Dismiss quality warning")
+                Text("Some shots may be hard to compare")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ProofTheme.inkPrimary)
             }
 
-            ForEach(warningIssues, id: \.id) { item in
-                HStack(spacing: ProofTheme.spacingSM) {
-                    Text("\(item.pose.title):")
-                        .proofFont(12, weight: .light, relativeTo: .caption1)
-                        .foregroundStyle(ProofTheme.textSecondary)
-
-                    Text(item.issue)
-                        .proofFont(12, weight: .light, relativeTo: .caption1)
-                        .foregroundStyle(ProofTheme.statusFair)
-
-                    Spacer()
-
-                    if let onRetake {
-                        Button {
-                            onRetake(item.pose)
-                        } label: {
-                            Text("Retake")
-                                .proofFont(12, weight: .light, relativeTo: .caption1)
-                                .foregroundStyle(ProofTheme.accent)
-                        }
-                        .accessibilityLabel("Retake \(item.pose.title) photo")
-                    }
-                }
+            ForEach(Array(qualityIssues.enumerated()), id: \.offset) { _, item in
+                Text("\(item.pose.title): \(item.issue)")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(ProofTheme.inkSoft)
             }
         }
-        .padding(ProofTheme.spacingMD)
-        .background(ProofTheme.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                .stroke(ProofTheme.statusFair.opacity(0.3), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Quality warning: some photos may be difficult to compare")
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(notesBackground)
     }
 
-    // MARK: - Actions
+    @ViewBuilder
+    private var notesBackground: some View {
+        if #available(iOS 26, *) {
+            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
+                .fill(.clear)
+                .glassEffect(.regular, in: .rect(cornerRadius: ProofTheme.radiusMD))
+        } else {
+            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
+                .fill(ProofTheme.paperHi.opacity(0.6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
+                        .stroke(ProofTheme.statusFair.opacity(0.3), lineWidth: 1)
+                )
+        }
+    }
+
+    @ViewBuilder
+    private var actions: some View {
+        if isFromHistory {
+            Button(role: .destructive) {
+                showDeleteConfirmation = true
+            } label: {
+                Text("Delete session")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(ProofTheme.statusPoor)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(deleteBackground)
+            }
+            .accessibilityLabel("Delete this session")
+        } else {
+            VStack(spacing: 10) {
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(ProofTheme.paperHi)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Capsule().fill(ProofTheme.inkPrimary))
+                }
+                .accessibilityLabel("Close review")
+
+                if savedSuccessfully {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(ProofTheme.statusGood)
+                        Text("Saved to Photos")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(ProofTheme.statusGood)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(savedBackground)
+                } else {
+                    Button {
+                        Task { await saveToCamera() }
+                    } label: {
+                        Text(isSaving ? "Saving…" : "Save to Photos")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(ProofTheme.inkSoft)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                    }
+                    .disabled(isSaving)
+                    .accessibilityLabel("Save photos to Photos")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var deleteBackground: some View {
+        if #available(iOS 26, *) {
+            Capsule().fill(.clear).glassEffect(.regular, in: .capsule)
+        } else {
+            Capsule().fill(ProofTheme.paperHi.opacity(0.6))
+                .overlay(Capsule().stroke(ProofTheme.statusPoor.opacity(0.2), lineWidth: 1))
+        }
+    }
+
+    @ViewBuilder
+    private var savedBackground: some View {
+        Capsule()
+            .fill(ProofTheme.statusGood.opacity(0.12))
+            .overlay(Capsule().stroke(ProofTheme.statusGood.opacity(0.3), lineWidth: 1))
+    }
 
     private func saveToCamera() async {
-        await MainActor.run {
-            isSaving = true
-            showSaveConfirmation = false
-        }
-
+        await MainActor.run { isSaving = true }
         let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
         guard status == .authorized || status == .limited else {
-            await MainActor.run {
-                isSaving = false
-            }
+            await MainActor.run { isSaving = false }
             return
         }
-
         do {
             for pose in Pose.allCases {
                 if let image = poseImages[pose] {
@@ -375,25 +327,13 @@ struct ReviewView: View {
                     }
                 }
             }
-
             await MainActor.run {
                 isSaving = false
                 savedSuccessfully = true
-                showSaveConfirmation = true
             }
             ProofTheme.hapticSuccess()
-
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(1400))
-                guard showSaveConfirmation else { return }
-                withAnimation(.easeOut(duration: 0.25)) {
-                    showSaveConfirmation = false
-                }
-            }
         } catch {
-            await MainActor.run {
-                isSaving = false
-            }
+            await MainActor.run { isSaving = false }
         }
     }
 
@@ -402,9 +342,4 @@ struct ReviewView: View {
         modelContext.delete(session)
         dismiss()
     }
-}
-
-#Preview {
-    ReviewView(images: [:])
-        .preferredColorScheme(.dark)
 }
