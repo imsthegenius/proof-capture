@@ -204,7 +204,9 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         let background = maskedBrightness(of: bgImage, with: invertedMask, in: extent)?.brightness
             ?? rawBrightness(of: bgImage, in: extent)
 
-        return background > person.brightness + 0.25
+        // Backlit requires a bright background plus a genuinely dark subject.
+        // The brightness floor avoids flagging bright-wall interiors as silhouettes.
+        return person.brightness < 0.20 && background > person.brightness + 0.25
     }
 
     // MARK: - Composite assessment

@@ -5,7 +5,7 @@ struct SettingsView: View {
     @Environment(AuthManager.self) private var authManager
     @AppStorage("userGender") private var genderRaw = 0
     @AppStorage("guidanceMode") private var guidanceMode = 0
-    @AppStorage("countdownSeconds") private var countdownSeconds = 5
+    @AppStorage("poseHoldSeconds") private var poseHoldSeconds = 3
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -45,20 +45,19 @@ struct SettingsView: View {
                 .accessibilityLabel("Guidance mode selection")
                 .padding(.vertical, ProofTheme.spacingXS)
 
-                // Countdown
+                // Pose window
                 VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
-                    Text("Countdown")
+                    Text("Pose window")
                         .proofFont(13, weight: .light, relativeTo: .footnote)
                         .foregroundStyle(ProofTheme.textTertiary)
 
                     HStack(spacing: ProofTheme.spacingSM) {
-                        settingOption(label: "3s", isSelected: countdownSeconds == 3) { countdownSeconds = 3 }
-                        settingOption(label: "5s", isSelected: countdownSeconds == 5) { countdownSeconds = 5 }
-                        settingOption(label: "10s", isSelected: countdownSeconds == 10) { countdownSeconds = 10 }
+                        settingOption(label: "3s", isSelected: poseHoldSeconds == 3) { poseHoldSeconds = 3 }
+                        settingOption(label: "5s", isSelected: poseHoldSeconds == 5) { poseHoldSeconds = 5 }
                     }
                 }
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel("Countdown timer duration")
+                .accessibilityLabel("Pose window duration")
                 .padding(.vertical, ProofTheme.spacingXS)
             } header: {
                 Text("CAPTURE")

@@ -14,6 +14,16 @@ enum ProofTheme {
 
     static let accent = Color(red: 235/255, green: 235/255, blue: 230/255)        // #EBEBE6 (warm white)
 
+    // MARK: - Light Surface Tokens (Albums tab — paper aesthetic)
+    // Camera flow stays dark (camera feed dominates). Albums is the only light surface.
+    static let paperHi = Color(red: 255/255, green: 248/255, blue: 237/255)       // #FFF8ED — warm cream
+    static let paperLo = Color(red: 245/255, green: 234/255, blue: 217/255)       // #F5EAD9 — slight tint for gradient
+    static let inkPrimary = Color(red: 49/255, green: 64/255, blue: 77/255)       // #31404D — slate text on paper
+    static let inkSoft = Color(red: 92/255, green: 71/255, blue: 61/255)          // #5C473D — warm brown secondary
+    static let pillFillLight = Color(red: 237/255, green: 237/255, blue: 237/255) // #EDEDED — selected tab pill on light
+    static let pillFillDark = Color(red: 84/255, green: 99/255, blue: 109/255)    // #54636D — selected pill on light, alt
+    static let warmBeige = Color(red: 245/255, green: 237/255, blue: 224/255)     // #F5EDE0 — liquid glass tint (never a foreground)
+
     // MARK: - Animation Timing
     static let animationFast: Double = 0.15
     static let animationDefault: Double = 0.3
@@ -69,6 +79,8 @@ enum ProofTheme {
     static let radiusSM: CGFloat = 8
     static let radiusMD: CGFloat = 12
     static let radiusLG: CGFloat = 20
+    static let radiusCapsule: CGFloat = 1000          // liquid-glass capsules (buttons, pills, tab bar)
+    static let cameraFrameRadius: CGFloat = 24        // inner rounded-rect camera frame (Figma Subtract curvature)
 
     // MARK: - Haptics
     static func hapticLight() {
@@ -88,7 +100,7 @@ enum ProofTheme {
     struct ProofButtonStyle: ButtonStyle {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
-                .font(.system(size: ProofTheme.scaledFontSize(15, relativeTo: .body), weight: .light))
+                .font(.system(size: ProofTheme.scaledFontSize(15, relativeTo: .body), weight: .regular))
                 .dynamicTypeSize(ProofTheme.dynamicTypeRange)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -103,7 +115,7 @@ enum ProofTheme {
     struct ProofSecondaryButtonStyle: ButtonStyle {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
-                .font(.system(size: ProofTheme.scaledFontSize(15, relativeTo: .body), weight: .light))
+                .font(.system(size: ProofTheme.scaledFontSize(15, relativeTo: .body), weight: .regular))
                 .dynamicTypeSize(ProofTheme.dynamicTypeRange)
                 .foregroundStyle(ProofTheme.textSecondary)
                 .frame(maxWidth: .infinity)
