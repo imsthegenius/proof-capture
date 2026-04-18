@@ -20,6 +20,7 @@ enum UserPreferences {
         static let hasCompletedOnboarding = "hasCompletedOnboarding"
         static let genderRaw = "userGender"
         static let legacyGenderRaw = "genderRaw"
+        static let poseHoldSeconds = "poseHoldSeconds"
         static let countdownSeconds = "countdownSeconds"
     }
 
@@ -49,12 +50,23 @@ enum UserPreferences {
         set { UserDefaults.standard.set(newValue, forKey: Key.genderRaw) }
     }
 
-    static var countdownSeconds: Int {
+    static var poseHoldSeconds: Int {
         get {
-            let value = UserDefaults.standard.integer(forKey: Key.countdownSeconds)
-            return value == 0 ? 5 : value
+            let defaults = UserDefaults.standard
+
+            if let storedValue = defaults.object(forKey: Key.poseHoldSeconds) as? Int {
+                return storedValue >= 5 ? 5 : 3
+            }
+
+            if let legacyValue = defaults.object(forKey: Key.countdownSeconds) as? Int {
+                let migratedValue = legacyValue >= 5 ? 5 : 3
+                defaults.set(migratedValue, forKey: Key.poseHoldSeconds)
+                return migratedValue
+            }
+
+            return 3
         }
-        set { UserDefaults.standard.set(newValue, forKey: Key.countdownSeconds) }
+        set { UserDefaults.standard.set(newValue >= 5 ? 5 : 3, forKey: Key.poseHoldSeconds) }
     }
 
     // MARK: Computed

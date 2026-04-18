@@ -20,6 +20,8 @@ enum CaptureEdgeState: Equatable {
 @Observable
 @MainActor
 final class SessionViewModel {
+    private let finalCountdownSeconds = 3
+
     var currentPose: Pose = .front
     var phase: SessionPhase = .positioning
     var capturedImages: [Pose: UIImage] = [:]
@@ -232,7 +234,7 @@ final class SessionViewModel {
         guard phase == .locked else { return }
 
         phase = .poseHold
-        try? await Task.sleep(for: .seconds(3))
+        try? await Task.sleep(for: .seconds(UserPreferences.poseHoldSeconds))
         guard phase == .poseHold else { return }
 
         await beginCountdown()
@@ -241,7 +243,7 @@ final class SessionViewModel {
     func beginCountdown() async {
         guard phase == .poseHold, captureStatusMessage == nil else { return }
         phase = .countdown
-        countdownValue = UserPreferences.countdownSeconds
+        countdownValue = finalCountdownSeconds
 
         for value in stride(from: countdownValue, through: 1, by: -1) {
             guard phase == .countdown else { return }
