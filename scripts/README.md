@@ -3,13 +3,20 @@
 These scripts support two different jobs:
 
 - `scripts/analyze-photo.swift`
-  - Static inspection of the current **live lock** lighting + pose pipeline.
+  - Static inspection of the current **live lock** lighting + pose pipeline
+    against committed edge cases.
+- `scripts/audit-calibration-album.swift`
+  - Local-only inventory and `suggested_*` seeding for the canonical client
+    album manifest.
 - `scripts/prepare-captured-photo-manifest.swift`
-  - Local-only prep for the real client album manifest used to calibrate the **captured-photo** scorer.
+  - Local-only prep for the real client album manifest used to calibrate the
+    **captured-photo** scorer.
 
-## Dataset policy
+## Dataset Policy
 
-The repo copy under `scripts/test-images/` is **validation-only**. It is useful for edge cases and regression checks, but it is **not** the source of truth for production thresholds.
+The repo copy under `scripts/edge-cases/` is **validation-only**. It is useful
+for edge cases and regression checks, but it is **not** the source of truth for
+production thresholds.
 
 Production scoring should be calibrated from the real client album manifest:
 
@@ -17,15 +24,28 @@ Production scoring should be calibrated from the real client album manifest:
 
 Raw client images stay local-only and are ignored by git.
 
-## Static analysis harness
+## Static Analysis Harness
 
 Run the current live analyzer against validation images:
 
 ```bash
-swift scripts/analyze-photo.swift scripts/test-images/*.jpg
+swift scripts/analyze-photo.swift scripts/edge-cases/*.jpg
 ```
 
-`scripts/analyze-photo.swift` is a parity harness for the current **live lock** analyzer. It mirrors the live lighting + pose gate, including the arm-relaxation check, so you can inspect how the current lock logic sees validation images.
+Generate structured output for reports:
+
+```bash
+swift scripts/analyze-photo.swift --format json scripts/edge-cases/*.jpg
+swift scripts/analyze-photo.swift --format csv scripts/edge-cases/*.jpg
+```
+
+`scripts/analyze-photo.swift` is a parity harness for the current **live
+lock** analyzer. It mirrors the live lighting + pose gate, including the
+arm-relaxation check, so you can inspect how the current lock logic sees
+validation images.
+
+Use `scripts/edge-cases/front_directional_good.jpg` as the deterministic
+bent-left-elbow fixture for pose-gate parity checks.
 
 This script mirrors the live lock pipeline:
 
@@ -36,9 +56,29 @@ This script mirrors the live lock pipeline:
 - pose/orientation/framing checks
 - arm-relaxation gating
 
-Use it to understand how the current live gate is seeing a frame. It is **not** a captured-photo scorer, and it is **not** enough by itself to justify production threshold changes without album-based evaluation.
+Use it to understand how the current live gate is seeing a frame. It is **not**
+a captured-photo scorer, and it is **not** enough by itself to justify
+production threshold changes without album-based evaluation.
 
-## Local manifest prep
+## Local Album Audit
+
+Generate or refresh the local-only manifest beside the canonical album:
+
+```bash
+swift scripts/audit-calibration-album.swift "/Users/imraan/Downloads/Client Pictures"
+```
+
+What it does:
+
+- inventories the local album recursively
+- excludes obvious non-calibration assets such as `Before-After` composites and
+  `Background.png`
+- preserves existing `label_*` columns if the local manifest already exists
+- seeds `suggested_pose`, `suggested_lockable`, and
+  `suggested_lighting_quality` from the current live-lock parity harness
+- writes the manifest to `/Users/imraan/Downloads/Client Pictures.checkd-manifest.local.csv`
+
+## Local Manifest Prep
 
 Prepare or upgrade the local client-album manifest for captured-photo labeling:
 
@@ -49,7 +89,8 @@ swift scripts/prepare-captured-photo-manifest.swift "/Users/imraan/Downloads/Cli
 What it does:
 
 - adds the captured-photo label columns if they are missing
-- assigns deterministic person-level splits:
+- assigns deterministic split buckets using a stable grouping key derived from
+  each row's containing folder:
   - `train_tune`
   - `threshold_check`
   - `final_validation`
@@ -59,11 +100,12 @@ Template schema lives in:
 
 `scripts/calibration-manifest.template.csv`
 
-## Captured-photo label rubric
+## Captured-Photo Label Rubric
 
 Each included image should be judged with this question:
 
-**“If this were sent to a coach as a weekly check-in, would it be good enough to assess physique change?”**
+**"If this were sent to a coach as a weekly check-in, would it be good enough
+to assess physique change?"**
 
 Required labels:
 
@@ -84,4 +126,4 @@ Scoring philosophy is body-first:
 - definition matters more than prettiness
 - face quality is not used to pick the final burst frame
 - slightly dark but well-defined can still be acceptable
-- bright but flat should not be treated as “good”
+- bright but flat should not be treated as "good"
