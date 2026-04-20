@@ -1,8 +1,8 @@
 #!/usr/bin/env swift
 //
 // analyze-photo.swift
-// Runs the exact same LightingAnalyzer + PoseDetector logic from Proof Capture
-// against static image files. Outputs detailed per-layer scores.
+// Runs the current live lock LightingAnalyzer + PoseDetector logic from Proof Capture
+// against static image files. Intended for debugging and parity checks of the live lock pipeline.
 //
 // Usage: swift scripts/analyze-photo.swift <image1.jpg> [image2.jpg] ...
 //
@@ -315,7 +315,7 @@ func analyzePose(cgImage: CGImage) -> PoseReport {
         orientation = nil
     }
 
-    // Arms check
+    // Keep this in sync with PoseDetector.checkArmsRelaxed
     let armsRelaxed: Bool = {
         guard let lw = try? observation.recognizedPoint(.leftWrist),
               let rw = try? observation.recognizedPoint(.rightWrist),
@@ -329,6 +329,16 @@ func analyzePose(cgImage: CGImage) -> PoseReport {
         let rightYOK = abs(rw.location.y - rh.location.y) < 0.08
         let leftXOK = abs(lw.location.x - lh.location.x) < 0.06
         let rightXOK = abs(rw.location.x - rh.location.x) < 0.06
+        if let leftElbow = try? observation.recognizedPoint(.leftElbow),
+           let leftShoulder = try? observation.recognizedPoint(.leftShoulder),
+           leftElbow.confidence > 0.3, leftShoulder.confidence > 0.3 {
+            let angle = angleBetween(
+                p1: leftShoulder.location,
+                vertex: leftElbow.location,
+                p2: lw.location
+            )
+            if angle < 150 { return false }
+        }
         return leftYOK && rightYOK && leftXOK && rightXOK
     }()
 
@@ -337,6 +347,17 @@ func analyzePose(cgImage: CGImage) -> PoseReport {
         positionFeedback: posFeedback, detectedOrientation: orientation,
         armsRelaxed: armsRelaxed, bodyRect: rect
     )
+}
+
+func angleBetween(p1: CGPoint, vertex: CGPoint, p2: CGPoint) -> CGFloat {
+    let v1 = CGPoint(x: p1.x - vertex.x, y: p1.y - vertex.y)
+    let v2 = CGPoint(x: p2.x - vertex.x, y: p2.y - vertex.y)
+    let dot = v1.x * v2.x + v1.y * v2.y
+    let mag1 = sqrt(v1.x * v1.x + v1.y * v1.y)
+    let mag2 = sqrt(v2.x * v2.x + v2.y * v2.y)
+    guard mag1 > 0, mag2 > 0 else { return 180 }
+    let cosAngle = dot / (mag1 * mag2)
+    return acos(min(max(cosAngle, -1), 1)) * 180 / .pi
 }
 
 // MARK: - Core Image Helpers (exact copies from LightingAnalyzer)
@@ -444,8 +465,8 @@ let args = CommandLine.arguments.dropFirst()
 if args.isEmpty {
     print("Usage: swift scripts/analyze-photo.swift <image1.jpg> [image2.jpg] ...")
     print("")
-    print("Runs the exact Proof Capture lighting + pose analysis pipeline")
-    print("against static images. Outputs per-layer scores.")
+    print("Runs the current live lock lighting + pose analysis pipeline")
+    print("against static images for debugging and parity checks.")
     exit(1)
 }
 

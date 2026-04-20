@@ -1,84 +1,87 @@
-# Proof Capture — Lighting & Pose Analysis Test Harness
+# Checkd Scoring Scripts
 
-Standalone macOS script that runs the exact same lighting + pose analysis pipeline from the Proof Capture app against static image files. Used for regression testing lighting calibration changes.
+These scripts support two different jobs:
 
-## Usage
+- `scripts/analyze-photo.swift`
+  - Static inspection of the current **live lock** lighting + pose pipeline.
+- `scripts/prepare-captured-photo-manifest.swift`
+  - Local-only prep for the real client album manifest used to calibrate the **captured-photo** scorer.
+
+## Dataset policy
+
+The repo copy under `scripts/test-images/` is **validation-only**. It is useful for edge cases and regression checks, but it is **not** the source of truth for production thresholds.
+
+Production scoring should be calibrated from the real client album manifest:
+
+`/Users/imraan/Downloads/Client Pictures.checkd-manifest.local.csv`
+
+Raw client images stay local-only and are ignored by git.
+
+## Static analysis harness
+
+Run the current live analyzer against validation images:
 
 ```bash
 swift scripts/analyze-photo.swift scripts/test-images/*.jpg
 ```
 
-Or analyze a single image:
+`scripts/analyze-photo.swift` is a parity harness for the current **live lock** analyzer. It mirrors the live lighting + pose gate, including the arm-relaxation check, so you can inspect how the current lock logic sees validation images.
+
+This script mirrors the live lock pipeline:
+
+- person-masked brightness
+- downlight gradient
+- shadow contrast
+- backlight detection
+- pose/orientation/framing checks
+- arm-relaxation gating
+
+Use it to understand how the current live gate is seeing a frame. It is **not** a captured-photo scorer, and it is **not** enough by itself to justify production threshold changes without album-based evaluation.
+
+## Local manifest prep
+
+Prepare or upgrade the local client-album manifest for captured-photo labeling:
 
 ```bash
-swift scripts/analyze-photo.swift scripts/test-images/front_directional_good.jpg
+swift scripts/prepare-captured-photo-manifest.swift "/Users/imraan/Downloads/Client Pictures.checkd-manifest.local.csv"
 ```
 
-## Test Images
+What it does:
 
-11 Unsplash images of **standing persons** covering three poses and the full lighting spectrum. Most images represent the actual Proof use case — a person standing upright in conditions a coaching client would encounter at home or in a gym. Two edge-case images (`front_window_poor`, `back_studio_good`) use tighter framing to test failure modes.
+- adds the captured-photo label columns if they are missing
+- assigns deterministic person-level splits:
+  - `train_tune`
+  - `threshold_check`
+  - `final_validation`
+- keeps duplicates and excluded rows out of calibration splits
 
-### Naming Convention
+Template schema lives in:
 
-```
-{pose}_{lighting-condition}_{human-expected-quality}.jpg
-```
+`scripts/calibration-manifest.template.csv`
 
-- **pose**: `front`, `side`, `back`
-- **lighting-condition**: descriptive tag (e.g., `directional`, `overhead`, `backlit`, `mirror`, `gym`)
-- **human-expected-quality**: `good`, `fair`, `poor` — reflects what a photographer would say about the lighting for progress photos, NOT the algorithm output
+## Captured-photo label rubric
 
-### Image Matrix
+Each included image should be judged with this question:
 
-| Image | Pose | Human Assessment | Analyzer Lighting | Analyzer Pose | Notes |
-|-------|------|-----------------|-------------------|---------------|-------|
-| `front_directional_good.jpg` | front | GOOD — directional teal light | GOOD — directional | front, 8 joints | Standing, full body, arms at sides |
-| `front_mirror_fair.jpg` | front | FAIR — gym mirror, overhead light | GOOD — overhead | front, 6 joints | Mirror selfie scenario |
-| `front_dim_poor.jpg` | front | POOR — very dark gym, overhead spots | GOOD — great shadows | front, 8 joints | Strong downlight gradient scores well |
-| `front_backlit_poor.jpg` | front | POOR — silhouette against bright sky | POOR — too dark | back, 7 joints | Person is near-black silhouette |
-| `front_window_poor.jpg` | front | POOR — silhouette against window | POOR — too dark | unknown, 0 joints | True backlit-window edge case; pure silhouette, body detection fails |
-| `side_stage_good.jpg` | side | GOOD — stage directional | GOOD — overhead | side, 7 joints | Bodybuilding side pose, full body |
-| `side_gym_fair.jpg` | side | FAIR — dark gym with overhead tracks | GOOD — great shadows | back, 7 joints | Person holding weight plate |
-| `side_mirror_fair.jpg` | side | FAIR — gym mirror, flat light | FAIR — flat | side, 5 joints | Mirror selfie, side orientation |
-| `back_studio_good.jpg` | back | GOOD — studio light, white background | POOR — backlit | back, 3 joints | Upper-body back muscles; white bg triggers backlit detection |
-| `back_gym_poor.jpg` | back | POOR — dark gym, minimal light | FAIR — flat | back, 7 joints | Back double bicep, full body |
-| `back_backlit_poor.jpg` | back | POOR — strong backlight from sky | POOR — backlit | front, 4 joints | True backlit detection confirmed |
+**“If this were sent to a coach as a weekly check-in, would it be good enough to assess physique change?”**
 
-### Coverage Summary
+Required labels:
 
-| Category | Count | Images |
-|----------|-------|--------|
-| Front pose | 5 | `front_*` |
-| Side pose | 3 | `side_*` |
-| Back pose | 3 | `back_*` |
-| Backlit scenario | 3 | `front_backlit_poor`, `front_window_poor`, `back_backlit_poor` |
-| Backlit-window | 1 | `front_window_poor` |
-| Mirror selfie | 2 | `front_mirror_fair`, `side_mirror_fair` |
-| GOOD lighting (human) | 3 | `front_directional_good`, `side_stage_good`, `back_studio_good` |
-| FAIR lighting (human) | 3 | `front_mirror_fair`, `side_gym_fair`, `side_mirror_fair` |
-| POOR lighting (human) | 5 | `front_dim_poor`, `front_backlit_poor`, `front_window_poor`, `back_gym_poor`, `back_backlit_poor` |
+- `label_pose`
+- `label_keep_verdict`
+- `label_coach_usable`
+- `label_definition_visibility`
+- `label_directionality`
+- `label_body_exposure`
+- `label_backlight`
+- `label_sharpness`
+- `label_framing`
+- `label_reason_tags`
 
-### Known Discrepancies
+Scoring philosophy is body-first:
 
-The "Human Assessment" and "Analyzer Lighting" columns intentionally differ in several cases. These discrepancies reveal where the algorithm's perception diverges from human judgment:
-
-1. **White/bright backgrounds score as backlit** — `back_studio_good` has a bright white background that triggers backlighting detection even though the person is well-lit. This is a known limitation of the background-vs-person brightness comparison.
-2. **Dark images with good shadow contrast score as GOOD** — `front_dim_poor` looks very dark to a human, but has strong directional shadow patterns that the algorithm values. The algorithm prioritizes shadow definition over absolute brightness.
-3. **True backlighting is correctly detected** — `back_backlit_poor`, `front_backlit_poor`, and `front_window_poor` correctly flag strong backlight or extreme darkness from backlighting.
-4. **Window backlighting produces zero-joint detection** — `front_window_poor` is a true backlit-window edge case where the person is a pure silhouette. Vision framework cannot detect any body landmarks (0/8 joints), confirming that window backlighting is the worst-case scenario for the pipeline. This image intentionally tests the failure mode, not the happy path.
-
-These mismatches are intentional test data — they define the baseline for tuning heuristic thresholds in later work.
-
-## What It Measures
-
-### Lighting (4 layers)
-1. **Exposure** — person brightness (0.0-1.0), too dark (<0.15), too bright (>0.82)
-2. **Downlighting** — upper vs lower body brightness gradient (>0.03 = overhead light detected)
-3. **Shadow Contrast** — quadrant variance normalized to 0-1 (>0.25 = good definition)
-4. **Backlighting** — background significantly brighter than person (>0.25 delta)
-
-### Pose
-- Body detection + joint count (out of 8 tracked)
-- Position quality (centered, correct distance)
-- Orientation (front/side/back)
-- Arms relaxed check
+- lighting matters more than brightness
+- definition matters more than prettiness
+- face quality is not used to pick the final burst frame
+- slightly dark but well-defined can still be acceptable
+- bright but flat should not be treated as “good”
