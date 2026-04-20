@@ -1,0 +1,12 @@
+filename,bucket,human_assessment,expected_lockable,expected_pose,expected_failure_mode,notes
+front_directional_good.jpg,arm-relaxation-regression,good,no,front,left-elbow-bent,Deterministic bent-left-elbow parity fixture for the live arm gate
+front_mirror_fair.jpg,dataset-contamination,fair,no,front,mirror-selfie,Validation-only mirror scenario
+front_dim_poor.jpg,lighting-failure,poor,no,front,dim-but-directional,Very dark front frame with shadow definition
+front_backlit_poor.jpg,lighting-failure,poor,no,front,backlit-silhouette,Subject is silhouetted against bright background
+front_window_poor.jpg,lighting-failure,poor,no,front,window-silhouette,Zero-joint backlit worst-case
+side_stage_good.jpg,dataset-contamination,good,no,side,stage-pose,Validation-only stage reference
+side_gym_fair.jpg,framing-ambiguity,fair,no,side,object-held,Subject is holding a weight plate
+side_mirror_fair.jpg,dataset-contamination,fair,no,side,mirror-selfie,Validation-only mirror side pose
+back_studio_good.jpg,lighting-ambiguity,good,no,back,bright-background,false-backlight regression guard
+back_gym_poor.jpg,lighting-failure,poor,no,back,flat-dark,Dark gym back pose
+back_backlit_poor.jpg,lighting-failure,poor,no,back,backlit-silhouette,Back pose with strong sky backlight

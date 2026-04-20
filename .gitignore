@@ -5,3 +5,5 @@ xcuserdata/
 DerivedData/
 .build/
 .DS_Store
+scripts/calibration-corpus/
+**/*.checkd-manifest.local.csv

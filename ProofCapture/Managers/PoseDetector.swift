@@ -145,9 +145,11 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
 
     // MARK: - Position Assessment
     //
-    // CALIBRATION NOTES (2026-04-04, TWO-478 TWO-515)
+    // CALIBRATION NOTES (2026-04-20, TWO-478 TWO-515 TWO-939)
     // ─────────────────────────────────────────────────────────
-    // Tested against scripts/test-images/ (13 standing progress photos).
+    // Validated against the committed edge-case suite (`scripts/edge-cases/`)
+    // and remeasured against the local calibration corpus workflow documented in
+    // `docs/engineering/checkd-lock-scoring-report.md`.
     // Target setup: phone propped at waist-to-chest height, user 6-8 ft away.
     //
     // Observed body heights (Vision normalized skeleton span):
@@ -156,7 +158,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
     //   Distant / partial detection: 0.10–0.28
     //   Too close (< 4 ft): 0.80+
     //
-    // Threshold changes:
+    // Threshold notes (TWO-939 provenance):
     //   "Too close" raised 0.80 → 0.85 — at 0.80 a shorter person at 5 ft
     //   is incorrectly flagged.
     //   "Too far" lowered 0.35 → 0.25 — the old 0.35 false-triggered on
@@ -209,9 +211,11 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
 
     // MARK: - Orientation Detection
     //
-    // CALIBRATION NOTES (2026-04-04, TWO-476 TWO-517)
+    // CALIBRATION NOTES (2026-04-20, TWO-476 TWO-517 TWO-939)
     // ─────────────────────────────────────────────────────────
-    // Tested against scripts/test-images/ (13 standing progress photos).
+    // Validated against the committed edge-case suite (`scripts/edge-cases/`)
+    // and remeasured against the local calibration corpus workflow documented in
+    // `docs/engineering/checkd-lock-scoring-report.md`.
     //
     // Front detection:
     //   noseConf threshold lowered 0.30 → 0.15 for primary path.
@@ -230,7 +234,7 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
     //   side_stage_good.jpg regression (shoulderWidth collapsed to 0).
     //
     // Back detection:
-    //   noseConf < 0.10 unchanged — working correctly across test set.
+    //   noseConf < 0.10 unchanged — still passes the current validation suite.
     //
     // Observed values (normalized x-distance at 6-8 ft):
     //   Shoulder width, front: 0.25–0.42
@@ -277,7 +281,8 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         // SIDE: multiple signals — any one sufficient
         let earAsymmetry = abs(leftEarConf - rightEarConf)
 
-        // Ear asymmetry + compressed shoulders (threshold 0.20, was 0.15)
+        // Ear asymmetry + compressed shoulders (threshold 0.20; remeasured
+        // against the local calibration corpus in TWO-939)
         if earAsymmetry > 0.3 && shoulderWidth > 0 && shoulderWidth < 0.20 {
             return .side
         }
@@ -340,9 +345,9 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         let leftYOK = abs(leftWrist.location.y - leftHip.location.y) < 0.08
         let rightYOK = abs(rightWrist.location.y - rightHip.location.y) < 0.08
 
-        // Wrist horizontally near hip (X within 6% of frame)
-        let leftXOK = abs(leftWrist.location.x - leftHip.location.x) < 0.06
-        let rightXOK = abs(rightWrist.location.x - rightHip.location.x) < 0.06
+        // Wrist horizontally near hip (X within 10% of frame)
+        let leftXOK = abs(leftWrist.location.x - leftHip.location.x) < 0.10
+        let rightXOK = abs(rightWrist.location.x - rightHip.location.x) < 0.10
 
         // Elbow angle check — arms at sides should be ~160-180 degrees
         if let leftElbow = try? observation.recognizedPoint(.leftElbow),
