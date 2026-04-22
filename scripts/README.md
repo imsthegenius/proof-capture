@@ -82,3 +82,68 @@ These mismatches are intentional test data — they define the baseline for tuni
 - Position quality (centered, correct distance)
 - Orientation (front/side/back)
 - Arms relaxed check
+
+---
+
+## Blind re-label protocol (`scripts/blind-relabel.swift`)
+
+Drives the TWO-942 holdout blind re-label pass under parent TWO-941. Produces the human-labeled truth that TWO-944 / TWO-945 / TWO-946 consume.
+
+Contract is locked in the TWO-942 Linear comments (schema v1 + addendum). This section is operator-facing summary, not source of truth — if the two disagree, the ticket comments win.
+
+### Why blind
+
+`/Users/imraan/Downloads/Client Pictures.checkd-manifest.local.csv` has labels auto-seeded by `analyze-photo.swift` (same engine as `CheckInScorer`). Tuning against those labels is a consistency check, not validation. This harness presents the reviewer ONLY with `source_path` and the absolute image path; all seeded labels stay hidden until the reviewer has committed their own verdict.
+
+### Input and output
+
+| Path | Role | Committed? |
+|---|---|---|
+| `/Users/imraan/Downloads/Client Pictures.checkd-manifest.local.csv` | Source of truth for the 83 holdout rows (filters to `split IN {threshold_check, final_validation}`) | No, local only |
+| `/Users/imraan/Downloads/Client Pictures/<path>` | Image corpus | No, local only |
+| `scripts/reviewed-holdout.csv` | Blind-pass labels, then TWO-943 adjudicated freeze | No (in `.gitignore`) |
+| `scripts/reviewed-holdout-disputes.csv` | Diff vs auto-seeded, adjudication worksheet | No (in `.gitignore`) |
+| `scripts/relabel-metadata.json` | Manifest SHA, row count, harness SHA, started_at — drift guard | No (in `.gitignore`) |
+| `scripts/reviewed-holdout.csv.frozen` | Marker that TWO-943 wrote; calibration refuses to run without it | No (in `.gitignore`) |
+
+### Commands
+
+```bash
+swift scripts/blind-relabel.swift --status
+swift scripts/blind-relabel.swift --next
+swift scripts/blind-relabel.swift --commit <source_path> <verdict> <tags> <pose> <framing>
+swift scripts/blind-relabel.swift --disputes
+swift scripts/blind-relabel.swift --dry-run
+swift scripts/blind-relabel.swift --test-classifier   # smoke test for dispute classification + tag normalization
+```
+
+`--next` is the entry point of the labeling loop. It emits exactly:
+- `index` of current / total
+- `source_path` (relative to image root)
+- `absolute` path for opening the image
+- `split` and `manifest_row_index`
+
+It does NOT emit any seeded label.
+
+`--commit` appends one row to `reviewed-holdout.csv`. Field order: `source_path`, `verdict`, `tags`, `pose`, `framing`. Rejects unknown values and rejects duplicate `source_path`.
+
+`--disputes` can only run after all 83 rows are labeled. It reads seeded labels for the first time and emits `reviewed-holdout-disputes.csv` row-per-diverging-field. Raw seeded verdicts are preserved in `auto_value` / `legacy_seed_verdict` — no silent mapping.
+
+### Field values
+
+| Field | Values |
+|---|---|
+| `verdict` | `keep`, `warn`, `retakeRecommended` |
+| `pose` | `front`, `side`, `back`, `unclear` |
+| `framing` | `ideal`, `ok`, `tooClose`, `tooFar`, `partial` |
+| `tags` | pipe or comma separated list drawn from: `arms`, `not-lockable`, `framing`, `tooClose`, `tooFar`, `backlight`, `dark`, `blurry`, `wrong-pose`, `partial-body`, `face-only`, `mirror-selfie`, `collage`, `stage-lighting`, `flash`, `low-contrast`, `other`. Use `none` or `-` for no tags. Harness normalizes to pipe-joined ASCII-sorted. |
+
+### Resume + drift guard
+
+- Resume key: `source_path` exact match.
+- First pass order: holdout rows sorted ASCII ascending by `source_path`.
+- If the source manifest's SHA-256 changes mid-pass, the harness aborts with a diff until `scripts/relabel-metadata.json` is deleted — prevents drift invalidating prior labels.
+
+### Freeze semantics (TWO-943)
+
+TWO-943 writes an empty `scripts/reviewed-holdout.csv.frozen` marker once adjudication is complete. With the marker present, the harness refuses `--commit`. The calibration loop (TWO-946) refuses to run without it.
