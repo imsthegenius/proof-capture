@@ -183,8 +183,14 @@ enum CheckInScorer {
             exposureScore = 1.0
         }
 
-        // Definition (shadow contrast) — this is the primary signal
-        let definitionNormalized = clamp((contrast - 0.05) / (0.35 - 0.05))
+        // Definition (shadow contrast) — this is the primary signal.
+        // TWO-946 pass 3 (2026-04-23): shadow-contrast band tightened from (0.05 → 0.35) to
+        // (0.02 → 0.20). Empirical distribution on the 63-row tuning-holdout has most coach-
+        // accepted frames at contrast 0.05–0.20, with very few above 0.25. The wider band
+        // floored most real-world frames at def_lighting ≤ 0.3 (→ overall < 0.75 → verdict=warn)
+        // even when the coach marked `keep`. Constants-only change; `flatLighting` / `weakDefinition`
+        // tag thresholds unchanged (informational tags, not verdict inputs).
+        let definitionNormalized = clamp((contrast - 0.02) / (0.20 - 0.02))
         if contrast < 0.08 {
             tags.append(.flatLighting)
         } else if contrast < 0.18 {
@@ -439,7 +445,12 @@ enum CheckInScorer {
         let bgBrightness = rawBrightness(of: bgImage, in: extent, context: ciContext)
         let bgCoverage = rawBrightness(of: invertedMask, in: extent, context: ciContext)
         let normalizedBgBrightness = bgCoverage > 0.02 ? min(bgBrightness / bgCoverage, 1.0) : 0.5
-        let isBacklit = normalizedBgBrightness > personBrightness + 0.25
+        // TWO-946 pass 2 (2026-04-23): raised catastrophic-backlight delta from 0.25 → 0.40.
+        // At 0.25 the gate fired on 5 of 7 post-pass-1 catastrophic rejects where the coach
+        // marked the frame `keep`. `severeBacklight` is an `isCatastrophicCaptured` tag, so
+        // a single false trigger forces `retakeRecommended` regardless of the weighted score.
+        // Constants-only change: the `+0.40` is the brightness-delta cutoff, not a category shift.
+        let isBacklit = normalizedBgBrightness > personBrightness + 0.40
 
         // Downlighting gradient (upper half vs lower half of person)
         let midY = extent.midY
@@ -550,7 +561,14 @@ enum CheckInScorer {
         // Normalize: 0.03 maps to 1.0
         let normalized = clamp(rawVariance / 0.03)
 
-        if rawVariance < 0.008 {
+        // TWO-946 pass 1 (2026-04-23): severeBlur disabled via `-1` sentinel.
+        // Root cause: Laplacian kernel [-1,-1,-1,-1,8,-1,-1,-1,-1] sums to 0; CIAreaAverage
+        // of a zero-sum convolution is ≈0 by construction. `rawVariance` here is actually the
+        // mean of the Laplacian output, not variance — so it's ≈0 on every image regardless of
+        // sharpness, and the 0.008 cutoff triggered severeBlur on 100% of real-world frames.
+        // Threshold moved to a sentinel that cannot fire; mildBlur left alone (informational only,
+        // not catastrophic). Algorithmic fix (real variance computation) tracked separately.
+        if rawVariance < -1 {
             tags.append(.severeBlur)
         } else if rawVariance < 0.015 {
             tags.append(.mildBlur)
