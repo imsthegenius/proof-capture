@@ -53,7 +53,7 @@ let REASON_TAG_VOCAB: Set<String> = [
     "arms", "not-lockable", "framing", "tooClose", "tooFar",
     "backlight", "dark", "blurry", "wrong-pose", "partial-body",
     "face-only", "mirror-selfie", "collage", "stage-lighting",
-    "flash", "low-contrast", "other"
+    "flash", "low-contrast"
 ]
 
 // Tier bucketing for verdict dispute classification (no silent mapping).

@@ -136,7 +136,7 @@ It does NOT emit any seeded label.
 | `verdict` | `keep`, `warn`, `retakeRecommended` |
 | `pose` | `front`, `side`, `back`, `unclear` |
 | `framing` | `ideal`, `ok`, `tooClose`, `tooFar`, `partial` |
-| `tags` | pipe or comma separated list drawn from: `arms`, `not-lockable`, `framing`, `tooClose`, `tooFar`, `backlight`, `dark`, `blurry`, `wrong-pose`, `partial-body`, `face-only`, `mirror-selfie`, `collage`, `stage-lighting`, `flash`, `low-contrast`, `other`. Use `none` or `-` for no tags. Harness normalizes to pipe-joined ASCII-sorted. |
+| `tags` | pipe or comma separated list drawn from: `arms`, `not-lockable`, `framing`, `tooClose`, `tooFar`, `backlight`, `dark`, `blurry`, `wrong-pose`, `partial-body`, `face-only`, `mirror-selfie`, `collage`, `stage-lighting`, `flash`, `low-contrast`. Use `none` or `-` for no tags. Harness normalizes to pipe-joined ASCII-sorted. |
 
 ### Resume + drift guard
 
