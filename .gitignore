@@ -13,4 +13,5 @@ scripts/reviewed-holdout-disputes.csv
 scripts/relabel-metadata.json
 scripts/tuning-holdout.csv
 scripts/blind-holdout.csv
+scripts/split-manifest.md
 scripts/reports/
