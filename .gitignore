@@ -5,3 +5,12 @@ xcuserdata/
 DerivedData/
 .build/
 .DS_Store
+
+# Local-only calibration artefacts (reference client-folder paths, keep out of git)
+scripts/reviewed-holdout.csv
+scripts/reviewed-holdout.csv.frozen
+scripts/reviewed-holdout-disputes.csv
+scripts/relabel-metadata.json
+scripts/tuning-holdout.csv
+scripts/blind-holdout.csv
+scripts/reports/
