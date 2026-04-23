@@ -12,8 +12,13 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     // MARK: - Public state
 
     var quality: QualityLevel = .fair
-    var feedback: String = "Analyzing lighting…"
+    var feedback: String = "Analyzing lighting..."
     var brightness: Double = 0.5
+
+    // Raw measurements exposed for canonical scorer
+    var directionalityGradient: Double = 0
+    var definitionContrast: Double = 0
+    var isBacklit: Bool = false
 
     // MARK: - Private
 
@@ -120,7 +125,14 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             isBacklit: backlit
         )
 
-        publishResult(quality: result.quality, feedback: result.feedback, brightness: exposure.brightness)
+        publishResult(
+            quality: result.quality,
+            feedback: result.feedback,
+            brightness: exposure.brightness,
+            gradient: downlight.gradient,
+            contrast: shadows.contrast,
+            backlit: backlit
+        )
     }
 
     // MARK: - Layer 1: Exposure
@@ -312,11 +324,17 @@ final class LightingAnalyzer: NSObject, AVCaptureVideoDataOutputSampleBufferDele
 
     // MARK: - State publishing
 
-    private func publishResult(quality: QualityLevel, feedback: String, brightness: Double) {
+    private func publishResult(
+        quality: QualityLevel, feedback: String, brightness: Double,
+        gradient: Double = 0, contrast: Double = 0, backlit: Bool = false
+    ) {
         Task { @MainActor in
             self.quality = quality
             self.feedback = feedback
             self.brightness = brightness
+            self.directionalityGradient = gradient
+            self.definitionContrast = contrast
+            self.isBacklit = backlit
         }
     }
 }

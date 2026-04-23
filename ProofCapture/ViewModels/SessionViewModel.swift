@@ -17,7 +17,7 @@ final class SessionViewModel {
     var currentPose: Pose = .front
     var phase: SessionPhase = .positioning
     var capturedImages: [Pose: UIImage] = [:]
-    var qualityReports: [Pose: PhotoQualityGate.Report] = [:]
+    var capturedAssessments: [Pose: CheckInVisualAssessment] = [:]
     var countdownValue: Int = 5
     var showAbortConfirmation = false
     var retakePose: Pose?
@@ -33,6 +33,7 @@ final class SessionViewModel {
     var poseDetector = PoseDetector()
     var lightingAnalyzer = LightingAnalyzer()
     var audioGuide = AudioGuide()
+    var liveAssessment: CheckInVisualAssessment?
     private var modelContext: ModelContext?
 
     var hasSavedProgress: Bool {
@@ -153,17 +154,36 @@ final class SessionViewModel {
         var readyDuration: TimeInterval = 0
         var timeSinceLastGuidance: TimeInterval = 0
         let checkInterval: TimeInterval = 0.25
-        let requiredDuration: TimeInterval = 0.3
+        let requiredDuration = CheckInVisualAssessment.liveStableDuration
         let guidanceInterval: TimeInterval = 4.0
 
         while !Task.isCancelled && phase == .positioning {
             if captureStatusMessage != nil || !cameraManager.isRunning {
                 readyDuration = 0
+                liveAssessment = nil
                 try? await Task.sleep(for: .milliseconds(Int(checkInterval * 1000)))
                 continue
             }
 
-            if poseDetector.isReady && lightingAnalyzer.quality != .poor {
+            // Compute canonical live assessment
+            let assessment = CheckInScorer.assessLive(.init(
+                bodyDetected: poseDetector.bodyDetected,
+                positionQuality: poseDetector.positionQuality,
+                poseMatchesExpected: poseDetector.poseMatchesExpected,
+                armsRelaxed: poseDetector.armsRelaxed,
+                detectedOrientation: poseDetector.detectedOrientation,
+                targetPose: currentPose,
+                bodyHeight: poseDetector.bodyHeight,
+                bodyCenterX: poseDetector.bodyCenterX,
+                lightingQuality: lightingAnalyzer.quality,
+                brightness: lightingAnalyzer.brightness,
+                directionalityGradient: lightingAnalyzer.directionalityGradient,
+                definitionContrast: lightingAnalyzer.definitionContrast,
+                isBacklit: lightingAnalyzer.isBacklit
+            ))
+            liveAssessment = assessment
+
+            if assessment.liveState == .ready {
                 readyDuration += checkInterval
                 if readyDuration >= requiredDuration {
                     await beginCountdown()
@@ -227,10 +247,10 @@ final class SessionViewModel {
             return
         }
 
-        // Run quality gate in background — does not block preview
+        // Run canonical captured assessment in background — does not block preview
         Task {
-            let report = await PhotoQualityGate.assess(image: savedImage, pose: pose)
-            self.qualityReports[pose] = report
+            let assessment = await CheckInScorer.assessCaptured(image: savedImage, pose: pose)
+            self.capturedAssessments[pose] = assessment
         }
 
         let resumePose = allRequiredPhotosCaptured ? currentPose : (currentPose.next ?? currentPose)
@@ -316,7 +336,7 @@ final class SessionViewModel {
         isRetaking = true
         showCompleteContent = false
         capturedImages[pose] = nil
-        qualityReports[pose] = nil
+        capturedAssessments[pose] = nil
         currentPose = pose
         poseDetector.targetPose = pose
         phase = .positioning

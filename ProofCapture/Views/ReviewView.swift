@@ -6,7 +6,7 @@ struct ReviewView: View {
     @Environment(\.modelContext) private var modelContext
 
     private let poseImages: [Pose: UIImage]
-    private let qualityReports: [Pose: PhotoQualityGate.Report]
+    private let capturedAssessments: [Pose: CheckInVisualAssessment]
     private let session: PhotoSession?
     private let isFromHistory: Bool
     private let onRetake: ((Pose) -> Void)?
@@ -21,11 +21,11 @@ struct ReviewView: View {
     // After capture — no session reference, shows "Session Complete"
     init(
         images: [Pose: UIImage],
-        qualityReports: [Pose: PhotoQualityGate.Report] = [:],
+        capturedAssessments: [Pose: CheckInVisualAssessment] = [:],
         onRetake: ((Pose) -> Void)? = nil
     ) {
         self.poseImages = images
-        self.qualityReports = qualityReports
+        self.capturedAssessments = capturedAssessments
         self.session = nil
         self.isFromHistory = false
         self.onRetake = onRetake
@@ -40,16 +40,23 @@ struct ReviewView: View {
             }
         }
         self.poseImages = images
-        self.qualityReports = [:]
+        self.capturedAssessments = [:]
         self.session = session
         self.isFromHistory = true
         self.onRetake = nil
     }
 
-    private var warningIssues: [(id: String, pose: Pose, issue: String)] {
-        Pose.allCases.flatMap { pose in
-            (qualityReports[pose]?.issues ?? []).map {
-                (id: "\(pose.title)-\($0)", pose: pose, issue: $0)
+    /// Only surface catastrophic/burst-local failures post-capture.
+    private var warningItems: [(id: String, pose: Pose, verdict: CheckInVisualAssessment.ReviewVerdict, reason: String)] {
+        Pose.allCases.compactMap { pose -> (id: String, pose: Pose, verdict: CheckInVisualAssessment.ReviewVerdict, reason: String)? in
+            guard let assessment = capturedAssessments[pose] else { return nil }
+            switch assessment.reviewVerdict {
+            case .keep:
+                return nil
+            case .warn:
+                return (id: "\(pose.title)-warn", pose: pose, verdict: .warn, reason: assessment.primaryReason)
+            case .retakeRecommended:
+                return (id: "\(pose.title)-retake", pose: pose, verdict: .retakeRecommended, reason: assessment.primaryReason)
             }
         }
     }
@@ -73,7 +80,7 @@ struct ReviewView: View {
                 .offset(y: hasAppeared ? 0 : 18)
                 .animation(.easeOut(duration: 0.45).delay(0.08), value: hasAppeared)
 
-            if showQualityWarning, !warningIssues.isEmpty {
+            if showQualityWarning, !warningItems.isEmpty {
                 qualityWarningBanner
                     .padding(.horizontal, ProofTheme.spacingMD)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -105,7 +112,7 @@ struct ReviewView: View {
             withAnimation(.easeOut(duration: 0.45)) {
                 hasAppeared = true
             }
-            if !warningIssues.isEmpty {
+            if !warningItems.isEmpty {
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(600))
                     withAnimation(.easeOut(duration: 0.35)) {
@@ -290,13 +297,16 @@ struct ReviewView: View {
     // MARK: - Quality Warning
 
     private var qualityWarningBanner: some View {
-        VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
-            HStack(spacing: ProofTheme.spacingSM) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 14, weight: .light))
-                    .foregroundStyle(ProofTheme.statusFair)
+        let hasRetake = warningItems.contains { $0.verdict == .retakeRecommended }
+        let accentColor = hasRetake ? ProofTheme.statusPoor : ProofTheme.statusFair
 
-                Text("Quality issues detected")
+        return VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
+            HStack(spacing: ProofTheme.spacingSM) {
+                Image(systemName: hasRetake ? "exclamationmark.triangle.fill" : "exclamationmark.triangle")
+                    .font(.system(size: 14, weight: .light))
+                    .foregroundStyle(accentColor)
+
+                Text(hasRetake ? "Some photos should be retaken" : "Quality issues detected")
                     .proofFont(13, weight: .light, relativeTo: .footnote)
                     .foregroundStyle(ProofTheme.textPrimary)
 
@@ -315,19 +325,19 @@ struct ReviewView: View {
                 .accessibilityLabel("Dismiss quality warning")
             }
 
-            ForEach(warningIssues, id: \.id) { item in
+            ForEach(warningItems, id: \.id) { item in
                 HStack(spacing: ProofTheme.spacingSM) {
                     Text("\(item.pose.title):")
                         .proofFont(12, weight: .light, relativeTo: .caption1)
                         .foregroundStyle(ProofTheme.textSecondary)
 
-                    Text(item.issue)
+                    Text(item.reason)
                         .proofFont(12, weight: .light, relativeTo: .caption1)
-                        .foregroundStyle(ProofTheme.statusFair)
+                        .foregroundStyle(item.verdict == .retakeRecommended ? ProofTheme.statusPoor : ProofTheme.statusFair)
 
                     Spacer()
 
-                    if let onRetake {
+                    if item.verdict == .retakeRecommended, let onRetake {
                         Button {
                             onRetake(item.pose)
                         } label: {
@@ -344,11 +354,11 @@ struct ReviewView: View {
         .background(ProofTheme.surface)
         .overlay(
             RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                .stroke(ProofTheme.statusFair.opacity(0.3), lineWidth: 1)
+                .stroke(accentColor.opacity(0.3), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Quality warning: some photos may be difficult to compare")
+        .accessibilityLabel(hasRetake ? "Quality warning: some photos should be retaken" : "Quality warning: some photos may be difficult to compare")
     }
 
     // MARK: - Actions

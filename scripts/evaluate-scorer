@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+#
+# Compiles the real CheckInScorer source files with a macOS harness main,
+# then runs the gold-set evaluation. No duplicated scorer logic.
+#
+# Usage: scripts/evaluate-scorer [manifest.csv]
+#   Default manifest: scripts/gold-set-manifest.csv
+#
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BINARY=$(mktemp /tmp/evaluate-scorer.XXXXX)
+trap "rm -f $BINARY" EXIT
+
+swiftc -O \
+  -framework Vision \
+  -framework CoreImage \
+  -framework AppKit \
+  "$ROOT/ProofCapture/Models/CheckInVisualAssessment.swift" \
+  "$ROOT/ProofCapture/Models/Pose.swift" \
+  "$ROOT/ProofCapture/Models/QualityLevel.swift" \
+  "$ROOT/ProofCapture/Services/CheckInScorer.swift" \
+  "$SCRIPT_DIR/evaluate-scorer-main.swift" \
+  -o "$BINARY"
+
+"$BINARY" "$@"

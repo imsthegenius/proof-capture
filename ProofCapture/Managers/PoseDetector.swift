@@ -20,6 +20,11 @@ final class PoseDetector: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
     var isReady = false
     var armsRelaxed = false
 
+    /// Normalized body height from skeleton span (0...1 in Vision coords)
+    var bodyHeight: Double { Double(bodyRect.height) }
+    /// Normalized body center X (0...1 in Vision coords, 0.5 = centered)
+    var bodyCenterX: Double { Double(bodyRect.midX) }
+
     // MARK: - Private
 
     nonisolated(unsafe) private var lastAnalysisTime: CFAbsoluteTime = 0

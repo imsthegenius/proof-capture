@@ -6,16 +6,20 @@ struct CaptureView: View {
     let poseDetector: PoseDetector
     let lightingAnalyzer: LightingAnalyzer
     let currentPose: Pose
+    let liveAssessment: CheckInVisualAssessment?
 
     @AppStorage("guidanceMode") private var guidanceModeRawValue = GuidanceMode.voice.rawValue
 
-    /// Composite readiness level drives the border glow state.
+    /// Border glow state derived from the canonical live assessment.
     var overallStatus: QualityLevel {
-        if !poseDetector.bodyDetected { return .poor }
-        if lightingAnalyzer.quality == .poor && poseDetector.positionQuality == .poor { return .poor }
-        if poseDetector.isReady && lightingAnalyzer.quality != .poor { return .good }
-        if poseDetector.positionQuality == .good || poseDetector.poseMatchesExpected { return .fair }
-        return .poor
+        guard let assessment = liveAssessment else {
+            return poseDetector.bodyDetected ? .fair : .poor
+        }
+        switch assessment.liveState {
+        case .ready: return .good
+        case .guiding: return .fair
+        case .blocked: return .poor
+        }
     }
 
     private var guidanceMode: GuidanceMode {

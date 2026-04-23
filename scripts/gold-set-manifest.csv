@@ -1,0 +1,12 @@
+filename,expected_pose,gold_verdict,definition_quality,directionality,backlight,framing,neutrality,notes
+back_backlit_poor.jpg,back,retakeRecommended,weak,flat,severe,usable,neutral,Strong backlight behind subject
+back_gym_poor.jpg,back,warn,partial,some,none,usable,neutral,Gym lighting but flat
+back_studio_good.jpg,back,keep,good,good,none,good,neutral,Studio overhead light
+front_backlit_poor.jpg,front,retakeRecommended,weak,flat,severe,usable,neutral,Window backlight
+front_dim_poor.jpg,front,retakeRecommended,weak,flat,none,usable,neutral,Very dark room
+front_directional_good.jpg,front,keep,good,good,none,good,neutral,Good overhead directional
+front_mirror_fair.jpg,front,warn,partial,some,none,usable,neutral,Mirror selfie with flash
+front_window_poor.jpg,front,retakeRecommended,weak,flat,severe,usable,neutral,Strong window backlight
+side_gym_fair.jpg,side,warn,partial,some,none,usable,neutral,Gym ambient light
+side_mirror_fair.jpg,side,warn,partial,some,none,usable,neutral,Mirror selfie side
+side_stage_good.jpg,side,keep,good,good,none,good,neutral,Stage lighting from above

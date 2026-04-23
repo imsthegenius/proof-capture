@@ -147,7 +147,8 @@ struct SessionView: View {
                 cameraManager: viewModel.cameraManager,
                 poseDetector: viewModel.poseDetector,
                 lightingAnalyzer: viewModel.lightingAnalyzer,
-                currentPose: viewModel.currentPose
+                currentPose: viewModel.currentPose,
+                liveAssessment: viewModel.liveAssessment
             )
 
             if viewModel.phase == .countdown {
@@ -324,7 +325,7 @@ struct SessionView: View {
             .offset(y: viewModel.showCompleteContent ? 0 : 18)
             .animation(.easeOut(duration: 0.45).delay(0.08), value: viewModel.showCompleteContent)
 
-            if viewModel.showCompleteContent, !qualityWarningIssues.isEmpty {
+            if viewModel.showCompleteContent, !qualityWarningItems.isEmpty {
                 qualityWarningView
                     .padding(.horizontal, ProofTheme.spacingMD)
                     .padding(.top, ProofTheme.spacingSM)
@@ -338,35 +339,45 @@ struct SessionView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var qualityWarningIssues: [(id: String, pose: Pose, issue: String)] {
-        Pose.allCases.flatMap { pose in
-            (viewModel.qualityReports[pose]?.issues ?? []).map {
-                (id: "\(pose.title)-\($0)", pose: pose, issue: $0)
+    /// Only surface catastrophic/burst-local failures — lighting/framing/neutrality
+    /// should have been solved by the live gate, not "discovered" post-capture.
+    private var qualityWarningItems: [(id: String, pose: Pose, verdict: CheckInVisualAssessment.ReviewVerdict, reason: String)] {
+        Pose.allCases.compactMap { pose -> (id: String, pose: Pose, verdict: CheckInVisualAssessment.ReviewVerdict, reason: String)? in
+            guard let assessment = viewModel.capturedAssessments[pose] else { return nil }
+            switch assessment.reviewVerdict {
+            case .keep:
+                return nil
+            case .warn:
+                return (id: "\(pose.title)-warn", pose: pose, verdict: .warn, reason: assessment.primaryReason)
+            case .retakeRecommended:
+                return (id: "\(pose.title)-retake", pose: pose, verdict: .retakeRecommended, reason: assessment.primaryReason)
             }
         }
     }
 
     private var qualityWarningView: some View {
-        VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
-            HStack(spacing: ProofTheme.spacingSM) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 14, weight: .light))
-                    .foregroundStyle(ProofTheme.statusFair)
+        let hasRetake = qualityWarningItems.contains { $0.verdict == .retakeRecommended }
 
-                Text("Some photos may be hard to compare")
+        return VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
+            HStack(spacing: ProofTheme.spacingSM) {
+                Image(systemName: hasRetake ? "exclamationmark.triangle.fill" : "exclamationmark.triangle")
+                    .font(.system(size: 14, weight: .light))
+                    .foregroundStyle(hasRetake ? ProofTheme.statusPoor : ProofTheme.statusFair)
+
+                Text(hasRetake ? "Some photos should be retaken" : "Some photos may be hard to compare")
                     .font(.system(size: 13, weight: .light))
                     .foregroundStyle(ProofTheme.textPrimary)
             }
 
-            ForEach(qualityWarningIssues, id: \.id) { item in
+            ForEach(qualityWarningItems, id: \.id) { item in
                 HStack(spacing: ProofTheme.spacingSM) {
                     Text("\(item.pose.title):")
                         .font(.system(size: 12, weight: .light))
                         .foregroundStyle(ProofTheme.textSecondary)
 
-                    Text(item.issue)
+                    Text(item.reason)
                         .font(.system(size: 12, weight: .light))
-                        .foregroundStyle(ProofTheme.statusFair)
+                        .foregroundStyle(item.verdict == .retakeRecommended ? ProofTheme.statusPoor : ProofTheme.statusFair)
                 }
             }
         }
@@ -375,10 +386,10 @@ struct SessionView: View {
         .background(ProofTheme.surface)
         .overlay(
             RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                .stroke(ProofTheme.statusFair.opacity(0.3), lineWidth: 1)
+                .stroke((hasRetake ? ProofTheme.statusPoor : ProofTheme.statusFair).opacity(0.3), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-        .accessibilityLabel("Quality warning: some photos may be difficult to compare")
+        .accessibilityLabel(hasRetake ? "Quality warning: some photos should be retaken" : "Quality warning: some photos may be difficult to compare")
     }
 
     // MARK: - Bottom Controls
