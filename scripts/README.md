@@ -156,3 +156,49 @@ The comparison rendering is appended to the current run's `summary.txt` so the p
 ### Scope boundary
 
 TWO-944 changes the evaluator only. No scorer constants, thresholds, or reason-tag vocab were touched. Calibration iteration against these metrics is TWO-946's job, gated on TWO-943 frozen reviewed-holdout and TWO-945 stratified split.
+
+---
+
+## `scripts/stratified-split.swift` — deterministic 63/20 split (TWO-945)
+
+Splits the frozen reviewed-holdout (83 rows, TWO-942/943 output) into `scripts/tuning-holdout.csv` (63 rows) + `scripts/blind-holdout.csv` (20 rows). TWO-946 reads the tuning set; TWO-947 offline gate runs once against the blind set.
+
+Both output CSVs are gitignored (carry client-folder `source_path` values). The `scripts/split-manifest.md` summary is also gitignored — it regenerates on every run with a fresh timestamp and does not contain source paths.
+
+### Usage
+
+```bash
+swift scripts/stratified-split.swift [--seed N] [--input <path>] \
+                                     [--frozen-marker <path>] [--out-dir <dir>] \
+                                     [--stdout blind|tuning]
+```
+
+Default input is the TWO-942 worktree frozen file:
+`/Users/imraan/Desktop/proof-capture/.claude/worktrees/two-942-blind-relabel-harness/scripts/reviewed-holdout.csv`
+
+The script dies with exit 2 if the frozen marker is missing.
+
+### Strata
+
+- `(label_pose × label_keep_verdict)` — rows with `label_pose=unclear` sit out of the stratified allocation and go directly to the tuning set.
+- Blind quota per stratum = largest-remainder rounding of `20 × n_stratum / n_scorable`, with ASCII tiebreak on the stratum key for determinism.
+- Back-pose floors: blind ≥ 4, tuning ≥ 12. When the initial allocation misses either, rows are moved between strata deterministically: non-back → back (to satisfy blind floor) or back → non-back (to satisfy tuning floor).
+
+### Determinism
+
+- Within each stratum, rows are ordered by `SHA-256("<seed>:<source_path>")`. Same seed + same input bytes → byte-identical outputs.
+- Input SHA-256 is written into `split-manifest.md`. TWO-946 compares against this hash to abort if calibration is pointed at a drifted holdout.
+
+### Byte-for-byte reproducibility check
+
+```bash
+swift scripts/stratified-split.swift                                  # write files
+diff <(swift scripts/stratified-split.swift --stdout blind) scripts/blind-holdout.csv
+diff <(swift scripts/stratified-split.swift --stdout tuning) scripts/tuning-holdout.csv
+```
+
+Both diffs must be empty.
+
+### Scope boundary
+
+TWO-945 changes nothing but the split generator. No scorer, no evaluator, no reviewed-holdout mutations. TWO-946 owns constant tuning.
