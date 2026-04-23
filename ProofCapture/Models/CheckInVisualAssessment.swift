@@ -88,9 +88,17 @@ struct CheckInVisualAssessment: Codable, Sendable {
 
     struct Diagnostics: Codable, Sendable {
         var rawSharpnessVariance: Double?
+        var orientationConfidence: Double?
+        var orientationMargin: Double?
 
-        init(rawSharpnessVariance: Double? = nil) {
+        init(
+            rawSharpnessVariance: Double? = nil,
+            orientationConfidence: Double? = nil,
+            orientationMargin: Double? = nil
+        ) {
             self.rawSharpnessVariance = rawSharpnessVariance
+            self.orientationConfidence = orientationConfidence
+            self.orientationMargin = orientationMargin
         }
     }
 

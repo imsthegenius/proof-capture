@@ -135,9 +135,10 @@ The dirty-tree flag is an advisory, not a fail — calibration iterations often 
 Every run writes to `scripts/reports/<UTC>_<shortSHA>[-dirty]/` (gitignored):
 
 - `summary.txt` — provenance banner + metrics, human-readable.
-- `rows.csv` — per-image detail: `source_path, expected_pose, gold_verdict_raw, scorer_verdict, overall_score, def_lighting, framing, pose_accuracy, pose_neutrality, sharpness, raw_sharpness_variance, reason_tags, primary_reason, match, false_accept, false_reject, catastrophic_reject`.
+- `rows.csv` — per-image detail: `source_path, expected_pose, gold_verdict_raw, scorer_verdict, overall_score, def_lighting, framing, pose_accuracy, pose_neutrality, sharpness, raw_sharpness_variance, orientation_confidence, orientation_margin, reason_tags, primary_reason, match, false_accept, false_reject, catastrophic_reject`.
 
 `raw_sharpness_variance` is the unbounded center-crop Laplacian variance used to derive the normalized `sharpness` score.
+`orientation_confidence` and `orientation_margin` are captured-pose diagnostics used to distinguish decisive `.wrongPose` mismatches from ambiguous `.poseUnclear` mismatches.
 
 ### Compare mode
 

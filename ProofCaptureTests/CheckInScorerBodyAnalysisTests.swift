@@ -57,4 +57,96 @@ final class CheckInScorerBodyAnalysisTests: XCTestCase {
         XCTAssertEqual(assessment.subScores.poseNeutrality, 0.4)
         XCTAssertTrue(assessment.reasonTags.contains(.stagedPose))
     }
+
+    func testHighConfidenceCapturedPoseMismatchIsWrongPose() {
+        var tags: [CheckInVisualAssessment.ReasonTag] = []
+        let poseScore = CheckInScorer.computeCapturedPoseAccuracyScore(
+            expected: .front,
+            orientation: .init(pose: .back, confidence: 0.8, margin: 0.3),
+            tags: &tags
+        )
+
+        let assessment = CheckInVisualAssessment.compute(
+            subScores: .init(
+                definitionLighting: 1.0,
+                framing: 1.0,
+                poseAccuracy: poseScore,
+                poseNeutrality: 1.0,
+                sharpness: 1.0
+            ),
+            reasonTags: tags,
+            mode: .captured,
+            primaryReason: "Wrong pose — check your position"
+        )
+
+        XCTAssertEqual(poseScore, 0.0)
+        XCTAssertTrue(tags.contains(.wrongPose))
+        XCTAssertEqual(assessment.reviewVerdict, .retakeRecommended)
+    }
+
+    func testLowConfidenceCapturedPoseMismatchIsPoseUnclearWarning() {
+        var tags: [CheckInVisualAssessment.ReasonTag] = []
+        let poseScore = CheckInScorer.computeCapturedPoseAccuracyScore(
+            expected: .front,
+            orientation: .init(pose: .side, confidence: 0.55, margin: 0.1),
+            tags: &tags
+        )
+
+        let assessment = CheckInVisualAssessment.compute(
+            subScores: .init(
+                definitionLighting: 0.45,
+                framing: 0.8,
+                poseAccuracy: poseScore,
+                poseNeutrality: 1.0,
+                sharpness: 1.0
+            ),
+            reasonTags: tags,
+            mode: .captured,
+            primaryReason: "Adjust your position"
+        )
+
+        XCTAssertEqual(poseScore, 0.5)
+        XCTAssertTrue(tags.contains(.poseUnclear))
+        XCTAssertFalse(tags.contains(.wrongPose))
+        XCTAssertEqual(assessment.reviewVerdict, .warn)
+    }
+
+    func testLowMarginCapturedPoseMatchIsPoseUnclear() {
+        var tags: [CheckInVisualAssessment.ReasonTag] = []
+        let poseScore = CheckInScorer.computeCapturedPoseAccuracyScore(
+            expected: .front,
+            orientation: .init(pose: .front, confidence: 0.85, margin: 0.1),
+            tags: &tags
+        )
+
+        XCTAssertEqual(poseScore, 0.5)
+        XCTAssertTrue(tags.contains(.poseUnclear))
+        XCTAssertFalse(tags.contains(.wrongPose))
+    }
+
+    func testMatchingCapturedOrientationWithHighConfidenceIsKeep() {
+        var tags: [CheckInVisualAssessment.ReasonTag] = []
+        let poseScore = CheckInScorer.computeCapturedPoseAccuracyScore(
+            expected: .front,
+            orientation: .init(pose: .front, confidence: 0.9, margin: 0.4),
+            tags: &tags
+        )
+
+        let assessment = CheckInVisualAssessment.compute(
+            subScores: .init(
+                definitionLighting: 1.0,
+                framing: 1.0,
+                poseAccuracy: poseScore,
+                poseNeutrality: 1.0,
+                sharpness: 1.0
+            ),
+            reasonTags: tags,
+            mode: .captured,
+            primaryReason: "Good check-in photo"
+        )
+
+        XCTAssertEqual(poseScore, 1.0)
+        XCTAssertTrue(tags.isEmpty)
+        XCTAssertEqual(assessment.reviewVerdict, .keep)
+    }
 }
