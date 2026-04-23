@@ -1,6 +1,7 @@
 #if canImport(UIKit)
 import UIKit
 #endif
+import CoreGraphics
 import CoreImage
 import Vision
 
@@ -129,7 +130,7 @@ enum CheckInScorer {
         )
 
         // --- Sharpness ---
-        let sharpnessScore = computeSharpnessScore(cgImage: cgImage, tags: &tags)
+        let sharpnessAnalysis = computeSharpnessScore(cgImage: cgImage, tags: &tags)
 
         let primaryReason = pickPrimaryReason(tags: tags, fallback: "Good check-in photo")
 
@@ -138,14 +139,15 @@ enum CheckInScorer {
             framing: bodyAnalysis.framingScore,
             poseAccuracy: bodyAnalysis.poseScore,
             poseNeutrality: bodyAnalysis.neutralityScore,
-            sharpness: sharpnessScore
+            sharpness: sharpnessAnalysis.score
         )
 
         return CheckInVisualAssessment.compute(
             subScores: subScores,
             reasonTags: tags,
             mode: .captured,
-            primaryReason: primaryReason
+            primaryReason: primaryReason,
+            diagnostics: .init(rawSharpnessVariance: sharpnessAnalysis.rawVariance)
         )
     }
 
@@ -499,82 +501,100 @@ enum CheckInScorer {
 
     // MARK: - Sharpness sub-score
 
-    private static func computeSharpnessScore(
+    struct SharpnessAnalysis: Sendable {
+        let rawVariance: Double
+        let score: Double
+    }
+
+    private static let sharpnessCropFraction: Double = 0.60
+    private static let sharpnessMaxDimension: Int = 512
+    private static let sharpnessNormalizationCeiling: Double = 3_000
+    private static let severeBlurVarianceThreshold: Double = 12
+    private static let mildBlurVarianceThreshold: Double = 150
+
+    static func computeSharpnessScore(
         cgImage: CGImage,
         tags: inout [CheckInVisualAssessment.ReasonTag]
-    ) -> Double {
-        let ciImage = CIImage(cgImage: cgImage)
+    ) -> SharpnessAnalysis {
+        let rawVariance = rawSharpnessVariance(cgImage: cgImage)
+        let score = clamp(rawVariance / sharpnessNormalizationCeiling)
 
-        let context = CIContext(options: [.useSoftwareRenderer: false])
-
-        // Analyze center 60% of the image
-        let extent = ciImage.extent
-        let insetX = extent.width * 0.2
-        let insetY = extent.height * 0.2
-        let centerRect = extent.insetBy(dx: insetX, dy: insetY)
-        let cropped = ciImage.cropped(to: centerRect)
-
-        let weights: [CGFloat] = [-1, -1, -1, -1, 8, -1, -1, -1, -1]
-        let weightVector = CIVector(values: weights, count: 9)
-
-        guard let convolution = CIFilter(
-            name: "CIConvolution3X3",
-            parameters: [
-                kCIInputImageKey: cropped,
-                "inputWeights": weightVector,
-                "inputBias": 0.0
-            ]
-        ),
-        let outputImage = convolution.outputImage else {
-            return 0
-        }
-
-        let outputExtent = outputImage.extent
-        guard let avgFilter = CIFilter(
-            name: "CIAreaAverage",
-            parameters: [
-                kCIInputImageKey: outputImage,
-                kCIInputExtentKey: CIVector(
-                    x: outputExtent.origin.x,
-                    y: outputExtent.origin.y,
-                    z: outputExtent.size.width,
-                    w: outputExtent.size.height
-                )
-            ]
-        ),
-        let avgOutput = avgFilter.outputImage else {
-            return 0
-        }
-
-        var pixel = [Float](repeating: 0, count: 4)
-        context.render(
-            avgOutput,
-            toBitmap: &pixel,
-            rowBytes: 16,
-            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-            format: .RGBAf,
-            colorSpace: CGColorSpaceCreateDeviceRGB()
-        )
-
-        let rawVariance = Double(abs(0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]))
-
-        // Normalize: 0.03 maps to 1.0
-        let normalized = clamp(rawVariance / 0.03)
-
-        // TWO-946 pass 1 (2026-04-23): severeBlur disabled via `-1` sentinel.
-        // Root cause: Laplacian kernel [-1,-1,-1,-1,8,-1,-1,-1,-1] sums to 0; CIAreaAverage
-        // of a zero-sum convolution is ≈0 by construction. `rawVariance` here is actually the
-        // mean of the Laplacian output, not variance — so it's ≈0 on every image regardless of
-        // sharpness, and the 0.008 cutoff triggered severeBlur on 100% of real-world frames.
-        // Threshold moved to a sentinel that cannot fire; mildBlur left alone (informational only,
-        // not catastrophic). Algorithmic fix (real variance computation) tracked separately.
-        if rawVariance < -1 {
+        if rawVariance < severeBlurVarianceThreshold {
             tags.append(.severeBlur)
-        } else if rawVariance < 0.015 {
+        } else if rawVariance < mildBlurVarianceThreshold {
             tags.append(.mildBlur)
         }
 
-        return normalized
+        return SharpnessAnalysis(rawVariance: rawVariance, score: score)
+    }
+
+    private static func rawSharpnessVariance(cgImage: CGImage) -> Double {
+        let width = cgImage.width
+        let height = cgImage.height
+        guard width >= 3, height >= 3 else { return 0 }
+
+        let cropWidth = max(3, Int(Double(width) * sharpnessCropFraction))
+        let cropHeight = max(3, Int(Double(height) * sharpnessCropFraction))
+        let cropX = max(0, (width - cropWidth) / 2)
+        let cropY = max(0, (height - cropHeight) / 2)
+        let cropRect = CGRect(x: cropX, y: cropY, width: cropWidth, height: cropHeight)
+
+        guard let cropped = cgImage.cropping(to: cropRect) else { return 0 }
+
+        let longestSide = max(cropWidth, cropHeight)
+        let scale = min(1.0, Double(sharpnessMaxDimension) / Double(longestSide))
+        let sampleWidth = max(3, Int(Double(cropWidth) * scale))
+        let sampleHeight = max(3, Int(Double(cropHeight) * scale))
+        let bytesPerRow = sampleWidth
+        let colorSpace = CGColorSpaceCreateDeviceGray()
+
+        guard let context = CGContext(
+            data: nil,
+            width: sampleWidth,
+            height: sampleHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ),
+        let data = context.data else {
+            return 0
+        }
+
+        context.interpolationQuality = .high
+        context.draw(cropped, in: CGRect(x: 0, y: 0, width: sampleWidth, height: sampleHeight))
+
+        let pixels = data.assumingMemoryBound(to: UInt8.self)
+        var sum: Double = 0
+        var sumSquares: Double = 0
+        var count: Double = 0
+
+        for y in 1..<(sampleHeight - 1) {
+            let row = y * bytesPerRow
+            let previousRow = (y - 1) * bytesPerRow
+            let nextRow = (y + 1) * bytesPerRow
+
+            for x in 1..<(sampleWidth - 1) {
+                let center = Int(pixels[row + x]) * 8
+                let response = center
+                    - Int(pixels[previousRow + x - 1])
+                    - Int(pixels[previousRow + x])
+                    - Int(pixels[previousRow + x + 1])
+                    - Int(pixels[row + x - 1])
+                    - Int(pixels[row + x + 1])
+                    - Int(pixels[nextRow + x - 1])
+                    - Int(pixels[nextRow + x])
+                    - Int(pixels[nextRow + x + 1])
+                let value = Double(response)
+                sum += value
+                sumSquares += value * value
+                count += 1
+            }
+        }
+
+        guard count > 0 else { return 0 }
+        let mean = sum / count
+        return max((sumSquares / count) - (mean * mean), 0)
     }
 
     // MARK: - Captured orientation detection (mirrors PoseDetector logic)

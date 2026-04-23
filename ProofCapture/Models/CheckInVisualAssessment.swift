@@ -86,6 +86,14 @@ struct CheckInVisualAssessment: Codable, Sendable {
         var sharpness: Double?           // 0.10 weight (captured only; nil in live)
     }
 
+    struct Diagnostics: Codable, Sendable {
+        var rawSharpnessVariance: Double?
+
+        init(rawSharpnessVariance: Double? = nil) {
+            self.rawSharpnessVariance = rawSharpnessVariance
+        }
+    }
+
     // MARK: - Assessment fields
 
     let mode: Mode
@@ -95,6 +103,7 @@ struct CheckInVisualAssessment: Codable, Sendable {
     let primaryReason: String                // Top blocking/guidance reason for UX
     let reasonTags: [ReasonTag]              // Ordered by severity
     let subScores: SubScores
+    let diagnostics: Diagnostics
 
     // MARK: - Canonical weights
 
@@ -118,7 +127,8 @@ struct CheckInVisualAssessment: Codable, Sendable {
         subScores: SubScores,
         reasonTags: [ReasonTag],
         mode: Mode,
-        primaryReason: String
+        primaryReason: String,
+        diagnostics: Diagnostics = Diagnostics()
     ) -> CheckInVisualAssessment {
         // Calculate weighted overall score
         let overall: Double
@@ -170,7 +180,8 @@ struct CheckInVisualAssessment: Codable, Sendable {
             reviewVerdict: reviewVerdict,
             primaryReason: primaryReason,
             reasonTags: reasonTags,
-            subScores: subScores
+            subScores: subScores,
+            diagnostics: diagnostics
         )
     }
 

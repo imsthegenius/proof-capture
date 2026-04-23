@@ -216,3 +216,42 @@ No other scorer constants, weights, tags, or architecture changed.
 - TWO-944 — decision-grade evaluator (used for BEFORE/AFTER/compare)
 - **TWO-966** — follow-up: fix sharpness variance computation (blocked by TWO-946 landing)
 - TWO-947 — offline gate on the blind set (should wait for gate-definition decision per recommendation above)
+
+## TWO-966 — sharpness algorithmic fix
+
+Run: `scripts/reports/2026-04-23T201331Z_882f34b-dirty/`
+
+Compare baseline: TWO-946 terminal run `scripts/reports/2026-04-23T133238Z_3204f56-dirty/`.
+
+### Change
+
+Replaced the broken `CIAreaAverage`-of-Laplacian path with a real center-crop grayscale Laplacian variance:
+
+- center crop: middle 60% of the image
+- sample cap: 512 px longest side
+- raw diagnostic: `E[L²] - E[L]²`
+- normalized score: `raw_sharpness_variance / 3000`, clamped to `[0, 1]`
+- restored thresholds: `severeBlur < 12`, `mildBlur < 150`
+
+### Metrics
+
+```
+Agreement:   31.7%  (was 38.1%, -6.4 pp)
+FRR:         50.0%  (was 62.5%, -12.5 pp)
+FAR:         100.0% (was 100.0%, +0.0 pp)
+Catastrophic keep→retake: 4
+```
+
+The agreement drop is expected pre-retune: real sharpness adds up to +0.10 score headroom and moves some gold-warn rows into `keep`. The downstream TWO-946 re-run owns the category/constant retune after TWO-966–TWO-968.
+
+### Sharpness distribution
+
+```
+sharpness min=0.215 max=1.000 mean=0.818 n=63
+raw_sharpness_variance min=643.893 max=19776.291 mean=4231.124 n=63
+severeBlur count=0/63
+```
+
+The old all-zero sharpness cluster is gone. `severeBlur` is restored as a real threshold and fired on 0% of tuning rows, satisfying the <5% tuning constraint while still firing on the synthetic heavy-blur unit fixture.
+
+No reserved gate-set rows were read for this section.
