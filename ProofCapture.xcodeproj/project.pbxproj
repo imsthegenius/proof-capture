@@ -26,6 +26,7 @@
 		473D9A0D30ED791BDEE8E80A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A39E4699DCC5F49D0C30783 /* Theme.swift */; };
 		49420C6BE97DC5B45DBC98E0 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = E83A2880857034BF2FEA30A3 /* Supabase */; };
 		52E994F3514E9E9A0A7BD152 /* AudioGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200EBD3D73D02DBBB9A2D15A /* AudioGuide.swift */; };
+		54C9CB64816A7F53BCE182DA /* CheckInScorerBodyAnalysisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E282E85DE71D940C47A5A634 /* CheckInScorerBodyAnalysisTests.swift */; };
 		5C0A5C0175A125705FA00588 /* guidance_arms.m4a in Resources */ = {isa = PBXBuildFile; fileRef = C3E5EAFC728FECB9F7FA5492 /* guidance_arms.m4a */; };
 		5E88DB5E5BE5D92B71D22ADE /* VoicePlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0615B155D1395EBE928274B3 /* VoicePlayer.swift */; };
 		5FB2925F822657D338065555 /* orient_back_from_side.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 298F2B09E2DDFB0F018A4EE0 /* orient_back_from_side.m4a */; };
@@ -163,11 +164,12 @@
 		D6ECC047066FB784F69248CF /* CheckInScorer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInScorer.swift; sourceTree = "<group>"; };
 		E0BD8FF3B82212E1276657FA /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		E21439A9C99B396260454AA9 /* f_orient_side_from_back.m4a */ = {isa = PBXFileReference; path = f_orient_side_from_back.m4a; sourceTree = "<group>"; };
+		E282E85DE71D940C47A5A634 /* CheckInScorerBodyAnalysisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInScorerBodyAnalysisTests.swift; sourceTree = "<group>"; };
 		EE1EAD3E887B75582E9EDC1C /* f_orient_back_from_side.m4a */ = {isa = PBXFileReference; path = f_orient_back_from_side.m4a; sourceTree = "<group>"; };
 		EF9F7E3F242518734ECAE7EE /* SetupGuideStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideStep.swift; sourceTree = "<group>"; };
 		FC4AC6875897EEF08EA013AA /* orient_front_from_back.m4a */ = {isa = PBXFileReference; path = orient_front_from_back.m4a; sourceTree = "<group>"; };
 		FDA4B45E8B405FB352640538 /* transition_front_to_side.m4a */ = {isa = PBXFileReference; path = transition_front_to_side.m4a; sourceTree = "<group>"; };
-		"TEMP_357F6DAE-12E8-47B2-8A59-B57540DF03C2" /* BuildConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildConfig.xcconfig; sourceTree = "<group>"; };
+		"TEMP_54E01391-DE23-466C-9E3A-A9ECCD13813D" /* BuildConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildConfig.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -286,6 +288,7 @@
 		AE5A14665E2D2AC544698041 /* ProofCaptureTests */ = {
 			isa = PBXGroup;
 			children = (
+				E282E85DE71D940C47A5A634 /* CheckInScorerBodyAnalysisTests.swift */,
 				D41E69D56C768E876D67D2C1 /* CheckInScorerSharpnessTests.swift */,
 			);
 			path = ProofCaptureTests;
@@ -359,12 +362,12 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_6C4A97FF-823D-4020-98D6-F6661680C4C4" /* two-966-sharpness-variance */ = {
+		"TEMP_C1A5DB13-D917-4336-8456-5B543704DE60" /* two-967-staged-pose-captured-decouple */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_357F6DAE-12E8-47B2-8A59-B57540DF03C2" /* BuildConfig.xcconfig */,
+				"TEMP_54E01391-DE23-466C-9E3A-A9ECCD13813D" /* BuildConfig.xcconfig */,
 			);
-			path = "two-966-sharpness-variance";
+			path = "two-967-staged-pose-captured-decouple";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -491,6 +494,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				54C9CB64816A7F53BCE182DA /* CheckInScorerBodyAnalysisTests.swift in Sources */,
 				18E9E2EB4F79A3DDC3888162 /* CheckInScorerSharpnessTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -551,7 +555,7 @@
 /* Begin XCBuildConfiguration section */
 		4A095083FA82C9BF361070B5 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_357F6DAE-12E8-47B2-8A59-B57540DF03C2" /* BuildConfig.xcconfig */;
+			baseConfigurationReference = "TEMP_54E01391-DE23-466C-9E3A-A9ECCD13813D" /* BuildConfig.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ProofCapture/ProofCapture.entitlements;
@@ -668,7 +672,7 @@
 		};
 		D66A55800C70B776086029FC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_357F6DAE-12E8-47B2-8A59-B57540DF03C2" /* BuildConfig.xcconfig */;
+			baseConfigurationReference = "TEMP_54E01391-DE23-466C-9E3A-A9ECCD13813D" /* BuildConfig.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ProofCapture/ProofCapture.entitlements;

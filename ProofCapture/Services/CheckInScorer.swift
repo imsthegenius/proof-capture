@@ -132,7 +132,7 @@ enum CheckInScorer {
         // --- Sharpness ---
         let sharpnessAnalysis = computeSharpnessScore(cgImage: cgImage, tags: &tags)
 
-        let primaryReason = pickPrimaryReason(tags: tags, fallback: "Good check-in photo")
+        let primaryReason = pickCapturedPrimaryReason(tags: tags, fallback: "Good check-in photo")
 
         let subScores = CheckInVisualAssessment.SubScores(
             definitionLighting: lightingResult,
@@ -382,12 +382,8 @@ enum CheckInScorer {
         }
 
         // --- Neutrality (staged pose detection) ---
-        var neutralityScore: Double = 1.0
         let armsRelaxed = checkCapturedArmsRelaxed(body: body)
-        if !armsRelaxed {
-            tags.append(.stagedPose)
-            neutralityScore = 0.4
-        }
+        let neutralityScore = computeCapturedNeutralityScore(armsRelaxed: armsRelaxed, tags: &tags)
 
         return BodyAnalysis(
             framingScore: clamp(framingScore),
@@ -643,6 +639,16 @@ enum CheckInScorer {
 
     // MARK: - Captured arms relaxed check (mirrors PoseDetector logic)
 
+    static func computeCapturedNeutralityScore(
+        armsRelaxed: Bool,
+        tags: inout [CheckInVisualAssessment.ReasonTag]
+    ) -> Double {
+        if !armsRelaxed {
+            tags.append(.stagedPose)
+        }
+        return 1.0
+    }
+
     private static func checkCapturedArmsRelaxed(body: VNHumanBodyPoseObservation) -> Bool {
         guard let leftWrist = try? body.recognizedPoint(.leftWrist),
               let rightWrist = try? body.recognizedPoint(.rightWrist),
@@ -722,6 +728,13 @@ enum CheckInScorer {
         case .poseUnclear: return "Adjust your position"
         case .mildBlur: return "Slight blur detected"
         }
+    }
+
+    static func pickCapturedPrimaryReason(
+        tags: [CheckInVisualAssessment.ReasonTag],
+        fallback: String
+    ) -> String {
+        pickPrimaryReason(tags: tags.filter { $0 != .stagedPose }, fallback: fallback)
     }
 
     // MARK: - Core Image helper
