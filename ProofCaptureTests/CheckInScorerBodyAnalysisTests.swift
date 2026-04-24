@@ -94,8 +94,8 @@ final class CheckInScorerBodyAnalysisTests: XCTestCase {
 
         let assessment = CheckInVisualAssessment.compute(
             subScores: .init(
-                definitionLighting: 0.45,
-                framing: 0.8,
+                definitionLighting: 1.0,
+                framing: 1.0,
                 poseAccuracy: poseScore,
                 poseNeutrality: 1.0,
                 sharpness: 1.0
@@ -106,6 +106,7 @@ final class CheckInScorerBodyAnalysisTests: XCTestCase {
         )
 
         XCTAssertEqual(poseScore, 0.5)
+        XCTAssertGreaterThanOrEqual(assessment.overallScore, CheckInVisualAssessment.capturedKeepThreshold)
         XCTAssertTrue(tags.contains(.poseUnclear))
         XCTAssertFalse(tags.contains(.wrongPose))
         XCTAssertEqual(assessment.reviewVerdict, .warn)

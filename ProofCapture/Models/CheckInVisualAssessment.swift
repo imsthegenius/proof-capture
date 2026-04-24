@@ -172,10 +172,11 @@ struct CheckInVisualAssessment: Codable, Sendable {
 
         // Determine review verdict
         let hasCatastrophicCaptured = reasonTags.contains { $0.isCatastrophicCaptured }
+        let hasAmbiguousCapturedPose = mode == .captured && reasonTags.contains(.poseUnclear)
         let reviewVerdict: ReviewVerdict
         if hasCatastrophicCaptured || overall < capturedWarnThreshold {
             reviewVerdict = .retakeRecommended
-        } else if overall < capturedKeepThreshold {
+        } else if hasAmbiguousCapturedPose || overall < capturedKeepThreshold {
             reviewVerdict = .warn
         } else {
             reviewVerdict = .keep
