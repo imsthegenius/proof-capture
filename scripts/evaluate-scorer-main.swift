@@ -50,6 +50,7 @@ struct EvalResult {
     let scorerVerdict: String       // keep/warn/retakeRecommended
     let overallScore: Double
     let subScores: CheckInVisualAssessment.SubScores
+    let diagnostics: CheckInVisualAssessment.Diagnostics
     let reasonTags: [String]
     let primaryReason: String
     let match: Bool                 // scorer verdict == gold verdict (using tier mapping)
@@ -433,6 +434,7 @@ func evaluateRow(_ row: EvalRow) async -> EvalResult? {
         scorerVerdict: scorer,
         overallScore: a.overallScore,
         subScores: a.subScores,
+        diagnostics: a.diagnostics,
         reasonTags: a.reasonTags.map(\.rawValue),
         primaryReason: a.primaryReason,
         match: agree,
@@ -561,6 +563,7 @@ let ROWS_HEADER = [
     "pose_accuracy",
     "pose_neutrality",
     "sharpness",
+    "raw_sharpness_variance",
     "reason_tags",
     "primary_reason",
     "match",
@@ -583,6 +586,7 @@ func rowCSVLine(_ r: EvalResult) -> String {
         f(r.subScores.poseAccuracy),
         f(r.subScores.poseNeutrality),
         r.subScores.sharpness.map(f) ?? "",
+        r.diagnostics.rawSharpnessVariance.map(f) ?? "",
         r.reasonTags.joined(separator: "|"),
         r.primaryReason,
         r.match ? "1" : "0",
