@@ -147,7 +147,11 @@ enum CheckInScorer {
             reasonTags: tags,
             mode: .captured,
             primaryReason: primaryReason,
-            diagnostics: .init(rawSharpnessVariance: sharpnessAnalysis.rawVariance)
+            diagnostics: .init(
+                rawSharpnessVariance: sharpnessAnalysis.rawVariance,
+                orientationConfidence: bodyAnalysis.orientationConfidence,
+                orientationMargin: bodyAnalysis.orientationMargin
+            )
         )
     }
 
@@ -284,6 +288,8 @@ enum CheckInScorer {
         let framingScore: Double
         let poseScore: Double
         let neutralityScore: Double
+        let orientationConfidence: Double?
+        let orientationMargin: Double?
     }
 
     private static func analyzeBody(
@@ -298,12 +304,24 @@ enum CheckInScorer {
             try handler.perform([request])
         } catch {
             tags.append(.bodyNotDetected)
-            return BodyAnalysis(framingScore: 0, poseScore: 0, neutralityScore: 0.5)
+            return BodyAnalysis(
+                framingScore: 0,
+                poseScore: 0,
+                neutralityScore: 0.5,
+                orientationConfidence: nil,
+                orientationMargin: nil
+            )
         }
 
         guard let body = request.results?.first else {
             tags.append(.bodyNotDetected)
-            return BodyAnalysis(framingScore: 0, poseScore: 0, neutralityScore: 0.5)
+            return BodyAnalysis(
+                framingScore: 0,
+                poseScore: 0,
+                neutralityScore: 0.5,
+                orientationConfidence: nil,
+                orientationMargin: nil
+            )
         }
 
         // --- Framing ---
@@ -370,16 +388,11 @@ enum CheckInScorer {
 
         // --- Pose accuracy ---
         let orientation = detectCapturedOrientation(body: body)
-        var poseScore: Double
-        if orientation == pose {
-            poseScore = 1.0
-        } else if orientation == nil {
-            tags.append(.poseUnclear)
-            poseScore = 0.35
-        } else {
-            tags.append(.wrongPose)
-            poseScore = 0.0
-        }
+        let poseScore = computeCapturedPoseAccuracyScore(
+            expected: pose,
+            orientation: orientation,
+            tags: &tags
+        )
 
         // --- Neutrality (staged pose detection) ---
         let armsRelaxed = checkCapturedArmsRelaxed(body: body)
@@ -388,7 +401,9 @@ enum CheckInScorer {
         return BodyAnalysis(
             framingScore: clamp(framingScore),
             poseScore: poseScore,
-            neutralityScore: neutralityScore
+            neutralityScore: neutralityScore,
+            orientationConfidence: orientation.confidence,
+            orientationMargin: orientation.margin
         )
     }
 
@@ -595,7 +610,40 @@ enum CheckInScorer {
 
     // MARK: - Captured orientation detection (mirrors PoseDetector logic)
 
-    private static func detectCapturedOrientation(body: VNHumanBodyPoseObservation) -> Pose? {
+    struct OrientationResult: Sendable {
+        let pose: Pose?
+        let confidence: Double
+        let margin: Double
+    }
+
+    static let orientationConfidenceThreshold: Double = 0.6
+    static let orientationMarginThreshold: Double = 0.2
+
+    static func computeCapturedPoseAccuracyScore(
+        expected: Pose,
+        orientation: OrientationResult,
+        tags: inout [CheckInVisualAssessment.ReasonTag]
+    ) -> Double {
+        if orientation.pose == expected,
+           orientation.confidence >= orientationConfidenceThreshold,
+           orientation.margin >= orientationMarginThreshold {
+            return 1.0
+        }
+
+        if orientation.pose != nil,
+           orientation.confidence >= orientationConfidenceThreshold,
+           orientation.margin >= orientationMarginThreshold {
+            tags.append(.wrongPose)
+            return 0.0
+        }
+
+        tags.append(.poseUnclear)
+        return 0.5
+    }
+
+    /// Returns the most likely captured body orientation with a confidence score for
+    /// the top hypothesis and a margin against the second-best hypothesis.
+    private static func detectCapturedOrientation(body: VNHumanBodyPoseObservation) -> OrientationResult {
         let nose = try? body.recognizedPoint(.nose)
         let leftEar = try? body.recognizedPoint(.leftEar)
         let rightEar = try? body.recognizedPoint(.rightEar)
@@ -624,17 +672,39 @@ enum CheckInScorer {
             return abs(lh.location.x - rh.location.x)
         }()
 
-        if noseConf < 0.1 { return .back }
+        var scores: [(pose: Pose, score: Double)] = [
+            (.front, 0),
+            (.side, 0),
+            (.back, 0),
+        ]
+        func assign(_ pose: Pose, _ score: Double) {
+            guard let index = scores.firstIndex(where: { $0.pose == pose }) else { return }
+            scores[index].score = max(scores[index].score, score)
+        }
+
+        if noseConf < 0.1 { assign(.back, 0.85) }
+        if noseConf < 0.15 { assign(.back, 0.45) }
+
+        if noseConf >= 0.1 { assign(.front, 0.45) }
+        if noseConf > 0.15 && shoulderWidth > 0.10 { assign(.front, 0.85) }
+        if noseConf > 0.15 && hipWidth > 0.10 { assign(.front, 0.75) }
 
         let earAsymmetry = abs(leftEarConf - rightEarConf)
-        if earAsymmetry > 0.3 && shoulderWidth > 0 && shoulderWidth < 0.20 { return .side }
-        if shoulderWidth > 0 && shoulderWidth < 0.20 && hipWidth > 0 && hipWidth < 0.12 { return .side }
-        if (leftShoulderConf > 0.3) != (rightShoulderConf > 0.3) { return .side }
-        if noseConf > 0.15 && shoulderWidth > 0.10 { return .front }
-        if noseConf > 0.15 && hipWidth > 0.10 { return .front }
-        if noseConf >= 0.1 { return .front }
+        if shoulderWidth > 0 && shoulderWidth < 0.20 { assign(.side, 0.45) }
+        if earAsymmetry > 0.3 && shoulderWidth > 0 && shoulderWidth < 0.20 { assign(.side, 0.80) }
+        if shoulderWidth > 0 && shoulderWidth < 0.20 && hipWidth > 0 && hipWidth < 0.12 { assign(.side, 0.75) }
+        if (leftShoulderConf > 0.3) != (rightShoulderConf > 0.3) { assign(.side, 0.55) }
 
-        return nil
+        let sorted = scores.sorted { $0.score > $1.score }
+        guard let best = sorted.first else {
+            return OrientationResult(pose: nil, confidence: 0, margin: 0)
+        }
+        let second = sorted.dropFirst().first?.score ?? 0
+        let confidence = clamp(best.score)
+        let margin = clamp(best.score - second)
+        let pose = confidence >= 0.35 ? best.pose : nil
+
+        return OrientationResult(pose: pose, confidence: confidence, margin: margin)
     }
 
     // MARK: - Captured arms relaxed check (mirrors PoseDetector logic)

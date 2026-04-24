@@ -88,9 +88,17 @@ struct CheckInVisualAssessment: Codable, Sendable {
 
     struct Diagnostics: Codable, Sendable {
         var rawSharpnessVariance: Double?
+        var orientationConfidence: Double?
+        var orientationMargin: Double?
 
-        init(rawSharpnessVariance: Double? = nil) {
+        init(
+            rawSharpnessVariance: Double? = nil,
+            orientationConfidence: Double? = nil,
+            orientationMargin: Double? = nil
+        ) {
             self.rawSharpnessVariance = rawSharpnessVariance
+            self.orientationConfidence = orientationConfidence
+            self.orientationMargin = orientationMargin
         }
     }
 
@@ -164,10 +172,11 @@ struct CheckInVisualAssessment: Codable, Sendable {
 
         // Determine review verdict
         let hasCatastrophicCaptured = reasonTags.contains { $0.isCatastrophicCaptured }
+        let hasAmbiguousCapturedPose = mode == .captured && reasonTags.contains(.poseUnclear)
         let reviewVerdict: ReviewVerdict
         if hasCatastrophicCaptured || overall < capturedWarnThreshold {
             reviewVerdict = .retakeRecommended
-        } else if overall < capturedKeepThreshold {
+        } else if hasAmbiguousCapturedPose || overall < capturedKeepThreshold {
             reviewVerdict = .warn
         } else {
             reviewVerdict = .keep
