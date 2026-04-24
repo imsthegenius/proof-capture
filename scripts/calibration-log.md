@@ -255,3 +255,107 @@ severeBlur count=0/63
 The old all-zero sharpness cluster is gone. `severeBlur` is restored as a real threshold and fired on 0% of tuning rows, satisfying the <5% tuning constraint while still firing on the synthetic heavy-blur unit fixture.
 
 No reserved gate-set rows were read for this section.
+
+## TWO-970 - post-fix constants retune
+
+Run scope: tuning holdout only, after TWO-966 sharpness variance, TWO-967 stagedPose decoupling, TWO-968 confidence-aware wrongPose, and TWO-969 diagnostic columns landed in `worktree-unified-scoring`.
+
+Baseline report: `scripts/reports/2026-04-24T180713Z_3d77d08/`
+
+Baseline metrics:
+
+```
+Agreement:   36.5% (23/63)
+FRR:         54.2% (13/24)
+FAR:         100.0% (2/2)
+Catastrophic keep->retake: 2
+Keep recall: 11/24 = 45.8%
+Per-pose agreement: front 25.0%, side 50.0%, back 38.5%
+```
+
+### Iteration 1 - sharpness normalization ceiling
+
+Trial: `sharpnessNormalizationCeiling` 3000 -> 2000.
+
+Report: `scripts/reports/2026-04-24T180809Z_3d77d08-dirty/`
+
+Result:
+
+```
+Agreement:   31.7% (was 36.5%, -4.8 pp)
+FRR:         54.2% (unchanged)
+Catastrophic keep->retake: 2 (unchanged)
+```
+
+Decision: revert. Lowering the ceiling did not rescue any gold-keep row, and it promoted extra gold-warn rows into keep. The severe/mild blur thresholds were also left unchanged because raw sharpness variance on the tuning rows ranged 643.893...19776.291, so neither blur tag fired at the restored 12/150 thresholds.
+
+### Iteration 2 - backlight delta
+
+Trials:
+
+- `isBacklit` delta 0.40 -> 0.60: improved metrics and removed severeBacklight from the mismatch top-10.
+- `isBacklit` delta 0.40 -> 0.50: same metrics as 0.60.
+- `isBacklit` delta 0.40 -> 0.45: same metrics as 0.60/0.50, smaller change.
+- `isBacklit` delta 0.40 -> 0.42: reverted to baseline; severeBacklight catastrophic rows returned.
+
+Accepted report for the smallest useful delta: `scripts/reports/2026-04-24T180906Z_3d77d08-dirty/`
+
+Result at 0.45:
+
+```
+Agreement:   39.7% (was 36.5%, +3.2 pp)
+FRR:         45.8% (was 54.2%, -8.4 pp)
+Catastrophic keep->retake: 0 (was 2)
+Keep recall: 13/24 = 54.2%
+Per-pose agreement: front 32.1%, side 50.0%, back 38.5%
+```
+
+Decision: keep `0.45`. It is the smallest tested delta that removes the remaining severeBacklight catastrophic keep rejects.
+
+### Iteration 3 - definition normalization band
+
+Trials:
+
+- `(contrast - 0.02) / (0.20 - 0.02)` -> `contrast / 0.12`: no metric movement.
+- `contrast / 0.08`: improved agreement and FRR.
+- `contrast / 0.06`: no further improvement beyond `0.08`.
+
+Accepted report: `scripts/reports/2026-04-24T181001Z_3d77d08-dirty/`
+
+Result at `contrast / 0.08`:
+
+```
+Agreement:   41.3% (was 39.7%, +1.6 pp)
+FRR:         41.7% (was 45.8%, -4.1 pp)
+Catastrophic keep->retake: 0
+Keep recall: 14/24 = 58.3%
+Per-pose agreement: front 35.7%, side 50.0%, back 38.5%
+```
+
+Decision: keep `contrast / 0.08`. It rescues one additional gold-keep row without reintroducing catastrophic keep rejects.
+
+### Terminal state
+
+Terminal constants:
+
+| Constant | Before TWO-970 | After TWO-970 |
+|---|---:|---:|
+| severeBlurVarianceThreshold | 12 | 12 |
+| mildBlurVarianceThreshold | 150 | 150 |
+| sharpnessNormalizationCeiling | 3000 | 3000 |
+| isBacklit brightness delta | 0.40 | 0.45 |
+| definitionNormalized band | `(contrast - 0.02) / (0.20 - 0.02)` | `contrast / 0.08` |
+
+Terminal tuning-holdout metrics:
+
+```
+Agreement:   41.3% (26/63)
+FRR:         41.7% (10/24)
+FAR:         100.0% (2/2; denominator remains too small for gating)
+Catastrophic keep->retake: 0
+Keep recall: 14/24 = 58.3%
+```
+
+Termination rationale: constants still do not make the revised offline gate provably passable from tuning evidence, but the loop has achieved the hard safety constraint of zero catastrophic keep rejects on the tuning holdout and retained the only two constant changes that improved both agreement and FRR. Further tested loosening of sharpness and definition constants either regressed agreement or stopped moving metrics. The next step is the one-time offline gate run owned by TWO-947.
+
+No reserved gate-set rows were read for this section.

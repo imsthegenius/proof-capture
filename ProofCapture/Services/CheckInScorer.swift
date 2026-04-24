@@ -190,13 +190,13 @@ enum CheckInScorer {
         }
 
         // Definition (shadow contrast) — this is the primary signal.
-        // TWO-946 pass 3 (2026-04-23): shadow-contrast band tightened from (0.05 → 0.35) to
-        // (0.02 → 0.20). Empirical distribution on the 63-row tuning-holdout has most coach-
+        // TWO-970 retune (2026-04-24): shadow-contrast band tightened to contrast / 0.08.
+        // Empirical distribution on the 63-row tuning-holdout has most coach-
         // accepted frames at contrast 0.05–0.20, with very few above 0.25. The wider band
         // floored most real-world frames at def_lighting ≤ 0.3 (→ overall < 0.75 → verdict=warn)
         // even when the coach marked `keep`. Constants-only change; `flatLighting` / `weakDefinition`
         // tag thresholds unchanged (informational tags, not verdict inputs).
-        let definitionNormalized = clamp((contrast - 0.02) / (0.20 - 0.02))
+        let definitionNormalized = clamp(contrast / 0.08)
         if contrast < 0.08 {
             tags.append(.flatLighting)
         } else if contrast < 0.18 {
@@ -458,12 +458,12 @@ enum CheckInScorer {
         let bgBrightness = rawBrightness(of: bgImage, in: extent, context: ciContext)
         let bgCoverage = rawBrightness(of: invertedMask, in: extent, context: ciContext)
         let normalizedBgBrightness = bgCoverage > 0.02 ? min(bgBrightness / bgCoverage, 1.0) : 0.5
-        // TWO-946 pass 2 (2026-04-23): raised catastrophic-backlight delta from 0.25 → 0.40.
+        // TWO-970 retune (2026-04-24): raised catastrophic-backlight delta to 0.45.
         // At 0.25 the gate fired on 5 of 7 post-pass-1 catastrophic rejects where the coach
         // marked the frame `keep`. `severeBacklight` is an `isCatastrophicCaptured` tag, so
         // a single false trigger forces `retakeRecommended` regardless of the weighted score.
-        // Constants-only change: the `+0.40` is the brightness-delta cutoff, not a category shift.
-        let isBacklit = normalizedBgBrightness > personBrightness + 0.40
+        // Constants-only change: the `+0.45` is the brightness-delta cutoff, not a category shift.
+        let isBacklit = normalizedBgBrightness > personBrightness + 0.45
 
         // Downlighting gradient (upper half vs lower half of person)
         let midY = extent.midY
