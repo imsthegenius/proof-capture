@@ -356,6 +356,8 @@ Catastrophic keep->retake: 0
 Keep recall: 14/24 = 58.3%
 ```
 
+Terminal report: `scripts/reports/2026-04-24T181226Z_5d8e375/`
+
 Termination rationale: constants still do not make the revised offline gate provably passable from tuning evidence, but the loop has achieved the hard safety constraint of zero catastrophic keep rejects on the tuning holdout and retained the only two constant changes that improved both agreement and FRR. Further tested loosening of sharpness and definition constants either regressed agreement or stopped moving metrics. The next step is the one-time offline gate run owned by TWO-947.
 
 No reserved gate-set rows were read for this section.
