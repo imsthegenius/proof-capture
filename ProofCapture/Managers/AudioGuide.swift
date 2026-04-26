@@ -106,6 +106,11 @@ final class AudioGuide: NSObject, AVSpeechSynthesizerDelegate {
         await voicePlayer.play(.sessionComplete)
     }
 
+    func speakLockAchieved() async {
+        guard mode == .voice else { return }
+        await speakWithSynthesizer("Locked. Lighting looks good. Take your pose.")
+    }
+
 
     /// Stops any current speech or playback immediately.
     func stop() {

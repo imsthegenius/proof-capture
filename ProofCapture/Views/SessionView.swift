@@ -7,6 +7,7 @@ struct SessionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Environment(SyncManager.self) private var syncManager
+    @AppStorage("guidanceMode") private var guidanceModeRawValue = GuidanceMode.voice.rawValue
 
     @State private var viewModel = SessionViewModel()
 
@@ -50,6 +51,22 @@ struct SessionView: View {
         .onDisappear {
             viewModel.handleViewExit(modelContext: modelContext, syncManager: syncManager)
         }
+        .sheet(isPresented: burstReviewBinding) {
+            BurstReviewSheet(
+                burst: viewModel.currentBurst,
+                selectedIndex: burstSelectionBinding,
+                pose: viewModel.currentPose,
+                onConfirm: {
+                    Task { @MainActor in
+                        await viewModel.confirmBurstSelection()
+                    }
+                },
+                onRedo: {
+                    viewModel.redoBurst()
+                }
+            )
+            .interactiveDismissDisabled()
+        }
         .alert("Retake \(viewModel.retakePose?.title ?? "") photo?", isPresented: retakeAlertBinding) {
             Button("Cancel", role: .cancel) {
                 viewModel.retakePose = nil
@@ -79,6 +96,20 @@ struct SessionView: View {
         )
     }
 
+    private var burstReviewBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.showBurstReview },
+            set: { viewModel.showBurstReview = $0 }
+        )
+    }
+
+    private var burstSelectionBinding: Binding<Int> {
+        Binding(
+            get: { viewModel.selectedBurstIndex },
+            set: { viewModel.selectedBurstIndex = $0 }
+        )
+    }
+
     // MARK: - Top Bar
 
     private var topBar: some View {
@@ -87,7 +118,7 @@ struct SessionView: View {
                 viewModel.showAbortConfirmation = true
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .light))
+                    .font(.system(size: 17, weight: .regular))
                     .foregroundStyle(ProofTheme.textSecondary)
             }
             .accessibilityLabel("End session")
@@ -112,7 +143,7 @@ struct SessionView: View {
             }
 
             Text("\(viewModel.currentPose.stepNumber) of 3 — \(viewModel.currentPose.title)")
-                .font(.system(size: 13, weight: .light))
+                .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(ProofTheme.textSecondary)
         }
     }
@@ -132,10 +163,9 @@ struct SessionView: View {
     @ViewBuilder
     private var mainContent: some View {
         switch viewModel.phase {
-        case .positioning, .countdown, .capturing:
+        case .positioning, .locked, .poseHold, .countdown, .capturing, .preview:
+            // .preview keeps the camera visible — the iOS26 burst review sheet overlays it.
             captureStage
-        case .preview:
-            previewView
         case .complete:
             completeView
         }
@@ -147,8 +177,24 @@ struct SessionView: View {
                 cameraManager: viewModel.cameraManager,
                 poseDetector: viewModel.poseDetector,
                 lightingAnalyzer: viewModel.lightingAnalyzer,
-                currentPose: viewModel.currentPose
+                currentPose: viewModel.currentPose,
+                sessionPhase: viewModel.phase,
+                captureEdgeState: viewModel.captureEdgeState
             )
+
+            if viewModel.phase == .locked {
+                phaseMirrorOverlay(
+                    title: "LOCKED",
+                    body: guidanceMode == .text ? "Lighting looks good. Take your pose." : nil
+                )
+            }
+
+            if viewModel.phase == .poseHold {
+                phaseMirrorOverlay(
+                    title: guidanceMode == .text ? "TAKE YOUR POSE" : "HOLD STILL",
+                    body: guidanceMode == .text ? "Hold your pose. Countdown is next." : nil
+                )
+            }
 
             if viewModel.phase == .countdown {
                 countdownOverlay
@@ -169,35 +215,59 @@ struct SessionView: View {
                 recoveryOverlay(message: message)
             }
         }
-        .task(id: viewModel.currentPose) {
-            await viewModel.monitorReadiness()
+        .task(id: "\(viewModel.currentPose.rawValue)-\(String(describing: viewModel.phase))") {
+            if viewModel.phase == .positioning {
+                await viewModel.monitorReadiness()
+            }
         }
+    }
+
+    private var guidanceMode: GuidanceMode {
+        GuidanceMode(rawValue: guidanceModeRawValue) ?? .voice
+    }
+
+    private func phaseMirrorOverlay(title: String, body: String?) -> some View {
+        VStack(spacing: 10) {
+            Text(title)
+                .font(.system(size: 40, weight: .medium))
+                .tracking(3)
+                .foregroundStyle(ProofTheme.paperHi)
+                .multilineTextAlignment(.center)
+
+            if let body {
+                Text(body)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(ProofTheme.paperHi.opacity(0.84))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 24)
+        .background(.black.opacity(0.42))
+        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .padding(.horizontal, 28)
+        .allowsHitTesting(false)
     }
 
     // MARK: - Countdown Overlay
 
+    // Per Figma 390:2790/2807/2823 — no scrim, just a giant centered numeral on the live camera.
+    // Figma spec: 200pt SF Pro Bold, paperHi cream, tracking 2.
+    // swiftlint:disable:next no_bold_weight
     private var countdownOverlay: some View {
-        ZStack {
-            ProofTheme.overlayScrim
-                .ignoresSafeArea()
-
-            VStack(spacing: ProofTheme.spacingMD) {
-                Text(viewModel.currentPose.title.uppercased())
-                    .font(.system(size: 15, weight: .light))
-                    .tracking(4)
-                    .foregroundStyle(ProofTheme.overlayText.opacity(0.6))
-
-                Text("\(viewModel.countdownValue)")
-                    .font(.system(size: 120, weight: .ultraLight))
-                    .foregroundStyle(ProofTheme.accent)
-                    .id(viewModel.countdownValue)
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 1.1).combined(with: .opacity),
-                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                    ))
-            }
+        Text("\(viewModel.countdownValue)")
+            .font(.system(size: 200, weight: .bold))
+            .tracking(2)
+            .foregroundStyle(ProofTheme.paperHi)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .id(viewModel.countdownValue)
+            .transition(.asymmetric(
+                insertion: .scale(scale: 1.1).combined(with: .opacity),
+                removal: .scale(scale: 0.9).combined(with: .opacity)
+            ))
             .animation(.easeOut(duration: 0.3), value: viewModel.countdownValue)
-        }
+            .allowsHitTesting(false)
     }
 
     // MARK: - Capturing Overlay
@@ -209,54 +279,9 @@ struct SessionView: View {
 
             if viewModel.captureFlashOpacity < 0.2 {
                 Text("Hold still")
-                    .font(.system(size: 20, weight: .light))
+                    .font(.system(size: 20, weight: .regular))
                     .foregroundStyle(ProofTheme.overlayText)
             }
-        }
-    }
-
-    // MARK: - Preview
-
-    private var previewView: some View {
-        ZStack {
-            if let image = viewModel.capturedImages[viewModel.currentPose] {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
-                    .padding(.horizontal, ProofTheme.spacingMD)
-                    .scaleEffect(viewModel.photoScale)
-                    .accessibilityLabel("\(viewModel.currentPose.title) photo captured")
-            }
-
-            VStack {
-                Spacer()
-
-                Circle()
-                    .fill(ProofTheme.statusGood.opacity(0.15))
-                    .frame(width: 64, height: 64)
-                    .overlay(
-                        CheckmarkShape()
-                            .trim(from: 0, to: viewModel.checkmarkProgress)
-                            .stroke(ProofTheme.statusGood, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-                            .frame(width: 32, height: 32)
-                    )
-
-                Spacer()
-                    .frame(height: ProofTheme.spacingXL)
-            }
-        }
-        .transition(.opacity)
-        .task {
-            withAnimation(.easeOut(duration: 0.4)) {
-                viewModel.checkmarkProgress = 1.0
-            }
-
-            withAnimation(.easeOut(duration: 0.3)) {
-                viewModel.photoScale = 1.0
-            }
-
-            await viewModel.autoAdvanceAfterPreview()
         }
     }
 
@@ -265,7 +290,7 @@ struct SessionView: View {
     private var completeView: some View {
         VStack(spacing: ProofTheme.spacingLG) {
             Text("Session Complete")
-                .font(.system(size: 24, weight: .light))
+                .font(.system(size: 24, weight: .regular))
                 .foregroundStyle(ProofTheme.textPrimary)
                 .opacity(viewModel.showCompleteContent ? 1 : 0)
                 .offset(y: viewModel.showCompleteContent ? 0 : 18)
@@ -287,7 +312,7 @@ struct SessionView: View {
                                         .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
 
                                     Text("Tap to retake")
-                                        .font(.system(size: 11, weight: .light))
+                                        .font(.system(size: 11, weight: .regular))
                                         .foregroundStyle(ProofTheme.overlayText.opacity(0.6))
                                         .padding(.vertical, ProofTheme.spacingXS)
                                         .frame(maxWidth: .infinity)
@@ -307,7 +332,7 @@ struct SessionView: View {
                         }
 
                         Text(pose.title)
-                            .font(.system(size: 12, weight: .light))
+                            .font(.system(size: 12, weight: .regular))
                             .foregroundStyle(ProofTheme.textTertiary)
                     }
                     .opacity(viewModel.showCompleteContent ? 1 : 0)
@@ -350,22 +375,22 @@ struct SessionView: View {
         VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
             HStack(spacing: ProofTheme.spacingSM) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 14, weight: .light))
+                    .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(ProofTheme.statusFair)
 
                 Text("Some photos may be hard to compare")
-                    .font(.system(size: 13, weight: .light))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(ProofTheme.textPrimary)
             }
 
             ForEach(qualityWarningIssues, id: \.id) { item in
                 HStack(spacing: ProofTheme.spacingSM) {
                     Text("\(item.pose.title):")
-                        .font(.system(size: 12, weight: .light))
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(ProofTheme.textSecondary)
 
                     Text(item.issue)
-                        .font(.system(size: 12, weight: .light))
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(ProofTheme.statusFair)
                 }
             }
@@ -386,39 +411,25 @@ struct SessionView: View {
     @ViewBuilder
     private var bottomControls: some View {
         switch viewModel.phase {
-        case .positioning:
-            Button {
-                Task { @MainActor in
-                    await viewModel.beginCountdown()
-                }
-            } label: {
-                Text("capture")
-                    .font(.system(size: 13, weight: .light))
-                    .foregroundStyle(ProofTheme.textTertiary)
-            }
-            .accessibilityLabel("Manual capture")
-            .disabled(viewModel.captureStatusMessage != nil)
-
-        case .countdown, .capturing, .preview:
+        case .positioning, .locked, .poseHold, .countdown, .capturing, .preview:
             EmptyView()
 
         case .complete:
             VStack(spacing: ProofTheme.spacingSM) {
                 Button {
-                    Task { @MainActor in
-                        await viewModel.saveAndFinish(modelContext: modelContext)
-                        dismiss()
-                    }
+                    dismiss()
                 } label: {
-                    Text("Save to Camera Roll")
+                    Text("Done")
                 }
                 .buttonStyle(ProofTheme.ProofButtonStyle())
 
                 Button {
-                    dismiss()
+                    Task { @MainActor in
+                        await viewModel.saveAndFinish(modelContext: modelContext)
+                    }
                 } label: {
-                    Text("Done")
-                        .font(.system(size: 15, weight: .light))
+                    Text("Save to Photos")
+                        .font(.system(size: 15, weight: .regular))
                         .foregroundStyle(ProofTheme.textSecondary)
                 }
                 .padding(.top, ProofTheme.spacingSM)
@@ -434,7 +445,7 @@ struct SessionView: View {
     private func recoveryOverlay(message: String) -> some View {
         VStack(spacing: ProofTheme.spacingMD) {
             Text(message)
-                .font(.system(size: 15, weight: .light))
+                .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(ProofTheme.overlayText)
                 .multilineTextAlignment(.center)
 
@@ -464,17 +475,134 @@ struct SessionView: View {
     }
 }
 
-// MARK: - Checkmark Shape
+// MARK: - Burst Review Sheet (iOS26 slide-up)
+//
+// Shown immediately after a burst capture, before advancing to the next pose.
+// Lets the user swipe through every frame in the burst, pick one, and confirm —
+// or redo the capture entirely.
+struct BurstReviewSheet: View {
+    let burst: [UIImage]
+    @Binding var selectedIndex: Int
+    let pose: Pose
+    let onConfirm: () -> Void
+    let onRedo: () -> Void
 
-private struct CheckmarkShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let w = rect.width
-        let h = rect.height
-        path.move(to: CGPoint(x: w * 0.2, y: h * 0.5))
-        path.addLine(to: CGPoint(x: w * 0.4, y: h * 0.7))
-        path.addLine(to: CGPoint(x: w * 0.8, y: h * 0.3))
-        return path
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+
+            if burst.isEmpty {
+                Spacer()
+                Text("No frames captured")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(ProofTheme.textSecondary)
+                Spacer()
+            } else {
+                burstCarousel
+                frameIndicator
+            }
+
+            Spacer(minLength: 0)
+
+            actions
+                .padding(.horizontal, ProofTheme.spacingMD)
+                .padding(.bottom, ProofTheme.spacingLG)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(sheetBackground)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(34)
+    }
+
+    @ViewBuilder
+    private var sheetBackground: some View {
+        if #available(iOS 26, *) {
+            Rectangle()
+                .fill(.clear)
+                .glassEffect(.regular, in: .rect)
+                .ignoresSafeArea()
+        } else {
+            ProofTheme.background
+                .ignoresSafeArea()
+        }
+    }
+
+    private var header: some View {
+        VStack(spacing: ProofTheme.spacingXS) {
+            Text(pose.title.uppercased())
+                .font(.system(size: 11, weight: .medium))
+                .tracking(2)
+                .foregroundStyle(ProofTheme.textTertiary)
+
+            Text("Pick your shot")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(ProofTheme.textPrimary)
+        }
+        .padding(.top, ProofTheme.spacingMD)
+        .padding(.bottom, ProofTheme.spacingMD)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var burstCarousel: some View {
+        TabView(selection: $selectedIndex) {
+            ForEach(Array(burst.enumerated()), id: \.offset) { index, image in
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusLG))
+                    .padding(.horizontal, ProofTheme.spacingMD)
+                    .tag(index)
+                    .accessibilityLabel("Frame \(index + 1) of \(burst.count)")
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(maxHeight: .infinity)
+    }
+
+    private var frameIndicator: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<burst.count, id: \.self) { index in
+                Circle()
+                    .fill(ProofTheme.accent.opacity(index == selectedIndex ? 1.0 : 0.25))
+                    .frame(width: 6, height: 6)
+                    .animation(.easeOut(duration: ProofTheme.animationFast), value: selectedIndex)
+            }
+        }
+        .padding(.vertical, ProofTheme.spacingMD)
+        .accessibilityLabel("Frame \(selectedIndex + 1) of \(burst.count)")
+    }
+
+    private var actions: some View {
+        HStack(spacing: ProofTheme.spacingSM) {
+            Button {
+                ProofTheme.hapticLight()
+                onRedo()
+            } label: {
+                Text("Redo")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(ProofTheme.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .modifier(ProofTheme.SecondaryButtonBackground())
+            }
+            .accessibilityLabel("Redo capture for \(pose.title)")
+
+            Button {
+                ProofTheme.hapticMedium()
+                onConfirm()
+            } label: {
+                Text("Use this shot")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(ProofTheme.background)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .modifier(ProofTheme.PrimaryButtonBackground())
+            }
+            .accessibilityLabel("Use selected frame for \(pose.title)")
+        }
     }
 }
 

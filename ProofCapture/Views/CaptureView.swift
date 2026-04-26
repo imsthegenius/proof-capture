@@ -6,11 +6,20 @@ struct CaptureView: View {
     let poseDetector: PoseDetector
     let lightingAnalyzer: LightingAnalyzer
     let currentPose: Pose
+    let sessionPhase: SessionPhase
+    let captureEdgeState: CaptureEdgeState?
 
     @AppStorage("guidanceMode") private var guidanceModeRawValue = GuidanceMode.voice.rawValue
 
     /// Composite readiness level drives the border glow state.
     var overallStatus: QualityLevel {
+        switch sessionPhase {
+        case .locked, .poseHold, .countdown, .capturing:
+            return .good
+        case .preview, .complete, .positioning:
+            break
+        }
+
         if !poseDetector.bodyDetected { return .poor }
         if lightingAnalyzer.quality == .poor && poseDetector.positionQuality == .poor { return .poor }
         if poseDetector.isReady && lightingAnalyzer.quality != .poor { return .good }
@@ -81,14 +90,15 @@ struct CaptureView: View {
                 overallStatus: overallStatus
             )
 
-            if !poseDetector.bodyDetected {
-                Text("Step into frame")
-                    .font(.system(size: 40, weight: .ultraLight))
-                    .foregroundStyle(ProofTheme.overlayText.opacity(0.8))
+            if captureEdgeState != nil {
+                edgeCaseOverlay
+                    .transition(.opacity)
+            } else if !poseDetector.bodyDetected && sessionPhase == .positioning {
+                instructionOverlay
                     .transition(.opacity)
             }
 
-            if isTextGuidanceMode && poseDetector.bodyDetected {
+            if isTextGuidanceMode && poseDetector.bodyDetected && sessionPhase == .positioning {
                 feedbackPills
             }
 
@@ -117,7 +127,7 @@ struct CaptureView: View {
                         cameraManager.switchCamera()
                     } label: {
                         Image(systemName: "camera.rotate")
-                            .font(.system(size: 17, weight: .light))
+                            .font(.system(size: 17, weight: .regular))
                             .foregroundStyle(ProofTheme.overlayText)
                             .frame(width: 52, height: 52)
                             .modifier(GlassCircle())
@@ -147,6 +157,97 @@ struct CaptureView: View {
             }
         }
         .onAppear { startAmberPulse() }
+    }
+
+    @ViewBuilder
+    private var edgeCaseOverlay: some View {
+        switch captureEdgeState {
+        case .noBody:
+            statusOverlay(
+                icon: "figure.stand",
+                title: "STEP INTO FRAME",
+                body: "I can’t see you. Step into the frame, or check the lens isn’t covered."
+            )
+        case .none:
+            EmptyView()
+        }
+    }
+
+    private func statusOverlay(icon: String, title: String, body: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 26, weight: .regular))
+                .foregroundStyle(ProofTheme.paperHi)
+
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 22, weight: .medium))
+                    .tracking(2)
+                    .foregroundStyle(ProofTheme.paperHi)
+
+                Text(body)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(ProofTheme.paperHi.opacity(0.82))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 24)
+        .background(.black.opacity(0.52))
+        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .padding(.horizontal, 32)
+    }
+
+    // MARK: - Instruction Overlay (Figma 390:2664)
+    // Shown when no body is detected. 48pt SF Pro Medium per Figma; paperHi cream color
+    // with letter tracking for the all-caps display feel. Includes the progress bar at
+    // the bottom matching the Figma track (cream fill at ~60%).
+    private var instructionOverlay: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 24) {
+                instructionLine("PLACE YOUR\nPHONE DOWN")
+                instructionLine("STAND 2M BACK")
+                instructionLine("TRY AND BE\nUNDER A LIGHT")
+            }
+            .padding(.top, 100)
+
+            Spacer()
+
+            progressBar
+                .padding(.horizontal, 1)
+                .padding(.bottom, 29)
+        }
+        .padding(.horizontal, 17)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Place your phone down, stand 2 meters back, try and be under a light")
+    }
+
+    // Figma 390:2664 has a 6pt-tall progress track at the bottom, ~60% filled with paperHi cream.
+    private var progressBar: some View {
+        ZStack(alignment: .leading) {
+            Capsule()
+                .fill(ProofTheme.textTertiary.opacity(0.2))
+                .frame(height: 6)
+
+            GeometryReader { geo in
+                Capsule()
+                    .fill(ProofTheme.paperHi)
+                    .frame(width: geo.size.width * 0.6, height: 6)
+            }
+            .frame(height: 6)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func instructionLine(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 48, weight: .medium))
+            .tracking(2)
+            .foregroundStyle(ProofTheme.paperHi)
+            .lineSpacing(2)
+            .multilineTextAlignment(.leading)
     }
 
     // MARK: - Amber Pulse Animation
@@ -228,7 +329,7 @@ struct CaptureView: View {
 
     private func feedbackPill(text: String, accent: Color) -> some View {
         Text(text)
-            .font(.system(size: 13, weight: .light))
+            .font(.system(size: 13, weight: .regular))
             .multilineTextAlignment(.center)
             .foregroundStyle(ProofTheme.overlayText)
             .padding(.vertical, 10)

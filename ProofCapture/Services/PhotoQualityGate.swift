@@ -181,9 +181,9 @@ struct PhotoQualityGate {
         let rawBrightness = averageBrightness(of: personImage, in: extent, context: context)
         let brightness = min(rawBrightness / coverage, 1.0)
 
-        if brightness < 0.12 {
+        if brightness < 0.15 {
             return "Too dark for comparison"
-        } else if brightness > 0.85 {
+        } else if brightness > 0.82 {
             return "Overexposed — too bright"
         }
         return nil
