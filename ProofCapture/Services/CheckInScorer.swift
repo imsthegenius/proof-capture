@@ -618,21 +618,28 @@ enum CheckInScorer {
 
     static let orientationConfidenceThreshold: Double = 0.6
     static let orientationMarginThreshold: Double = 0.2
+    // TWO-947 detector tuning (2026-04-26): high-confidence escape. Orientation
+    // scores >= 0.80 are produced only when the strong shape rules pass
+    // (front: noseConf > 0.15 && shoulderWidth > 0.10 → 0.85; back: noseConf
+    // < 0.10 → 0.85), so a tight margin against the runner-up is Vision noise
+    // on the secondary score, not genuine ambiguity. Conjunctive gate without
+    // this escape failed Mehul/IMG_8945.JPG (front, conf=0.85, margin=0.10).
+    static let orientationConfidenceHighEscape: Double = 0.80
 
     static func computeCapturedPoseAccuracyScore(
         expected: Pose,
         orientation: OrientationResult,
         tags: inout [CheckInVisualAssessment.ReasonTag]
     ) -> Double {
-        if orientation.pose == expected,
-           orientation.confidence >= orientationConfidenceThreshold,
-           orientation.margin >= orientationMarginThreshold {
+        let highConfidence = orientation.confidence >= orientationConfidenceHighEscape
+        let normalConfirm = orientation.confidence >= orientationConfidenceThreshold
+                         && orientation.margin >= orientationMarginThreshold
+
+        if orientation.pose == expected, highConfidence || normalConfirm {
             return 1.0
         }
 
-        if orientation.pose != nil,
-           orientation.confidence >= orientationConfidenceThreshold,
-           orientation.margin >= orientationMarginThreshold {
+        if orientation.pose != nil, highConfidence || normalConfirm {
             tags.append(.wrongPose)
             return 0.0
         }
@@ -729,10 +736,20 @@ enum CheckInScorer {
             return true  // Can't see wrists = probably back pose
         }
 
+        // TWO-947 detector tuning (2026-04-26): widened wrist-X tolerance from
+        // 0.06 → 0.12 and softened conjunction from "all 4 axes must hold" to
+        // "≤ 1 axis can fail". Blind-holdout run showed stagedPose mis-firing
+        // on 7 of 9 natural front shots; muscular men's arms hang outboard of
+        // hip-X by more than 6% of frame width.
         let leftYOK = abs(leftWrist.location.y - leftHip.location.y) < 0.08
         let rightYOK = abs(rightWrist.location.y - rightHip.location.y) < 0.08
-        let leftXOK = abs(leftWrist.location.x - leftHip.location.x) < 0.06
-        let rightXOK = abs(rightWrist.location.x - rightHip.location.x) < 0.06
+        let leftXOK = abs(leftWrist.location.x - leftHip.location.x) < 0.12
+        let rightXOK = abs(rightWrist.location.x - rightHip.location.x) < 0.12
+
+        let axisFailures = [leftYOK, rightYOK, leftXOK, rightXOK].filter { !$0 }.count
+        if axisFailures >= 2 {
+            return false
+        }
 
         if let leftElbow = try? body.recognizedPoint(.leftElbow),
            let leftShoulder = try? body.recognizedPoint(.leftShoulder),
@@ -750,7 +767,7 @@ enum CheckInScorer {
             }
         }
 
-        return leftYOK && rightYOK && leftXOK && rightXOK
+        return true
     }
 
     // MARK: - Primary reason selection

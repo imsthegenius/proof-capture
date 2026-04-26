@@ -1,0 +1,41 @@
+================================================================================
+  CheckInScorer evaluator — decision-grade metrics (TWO-944)
+  Manifest schema:   holdout  (20 rows)
+  Manifest:          scripts/blind-holdout.csv
+  Manifest sha256:   215ab6ede6a0c6aa808044c062dfffc7…
+  Images root:       /Users/imraan/Downloads/Client Pictures
+  Scorer source:     /Users/imraan/Desktop/proof-capture/.claude/worktrees/two-947-blind-gate/ProofCapture/Services/CheckInScorer.swift
+  Scorer sha256:     3549ba4b69ef1ae1a2f659c268bc1c52…
+  Git SHA:           b6a8231 (dirty tree — not reproducible)
+  CWD:               /Users/imraan/Desktop/proof-capture/.claude/worktrees/two-947-blind-gate
+  UTC timestamp:     2026-04-26T09:22:24Z
+================================================================================
+
+AGGREGATE
+  Total scored:        20  (skipped 0)
+  Agreement:           55.0%  (11/20)
+
+PER-POSE AGREEMENT
+  front                33.3%  (3/9)
+  side                 85.7%  (6/7)
+  back                 50.0%  (2/4)
+
+FALSE REJECT / FALSE ACCEPT
+  FRR (gold=keep → scorer not-keep):          0.0%  (0/8)
+  FAR (gold=drop|retake → scorer keep|warn):  0.0%  (0/0)
+  Catastrophic (keep → retakeRecommended):    0
+
+CONFUSION MATRIX (rows=gold tier, cols=scorer tier)
+                positive    middle  negative
+  positive             8         0         0
+  middle               9         3         0
+  negative             0         0         0
+  (positive = keep | middle = warn | negative = drop + retakeRecommended)
+
+TOP MISMATCH REASON TAGS (scorer's tags on rows where verdict disagreed)
+     9  feetMissing
+     3  tooFar
+     2  stagedPose
+     1  weakDefinition
+
+SKIPPED ROWS (0)
