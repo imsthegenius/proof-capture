@@ -1,0 +1,21 @@
+source_path,expected_pose,gold_verdict_raw,scorer_verdict,overall_score,def_lighting,framing,pose_accuracy,pose_neutrality,sharpness,raw_sharpness_variance,orientation_confidence,orientation_margin,reason_tags,primary_reason,match,false_accept,false_reject,catastrophic_reject
+Mehul /IMG_8942.JPG,side,keep,keep,0.888,0.750,1.000,1.000,1.000,1.000,8458.855,0.800,0.350,,Good check-in photo,1,0,0,0
+Mehul /IMG_8945.JPG,front,keep,warn,0.925,1.000,1.000,0.500,1.000,1.000,4333.905,0.850,0.100,poseUnclear|stagedPose,Adjust your position,0,0,1,0
+Mehul /IMG_8947.JPG,back,keep,keep,1.000,1.000,1.000,1.000,1.000,1.000,4098.612,0.850,0.850,stagedPose|weakDefinition,Try standing directly under an overhead light,1,0,0,0
+Mehul /IMG_8959.JPG,front,keep,keep,1.000,1.000,1.000,1.000,1.000,1.000,3779.951,0.850,0.850,stagedPose,Good check-in photo,1,0,0,0
+Mehul /IMG_8960.JPG,back,keep,keep,1.000,1.000,1.000,1.000,1.000,1.000,6012.651,0.850,0.850,,Good check-in photo,1,0,0,0
+Mehul /IMG_8965.JPG,side,keep,keep,1.000,1.000,1.000,1.000,1.000,1.000,7291.115,0.800,0.350,,Good check-in photo,1,0,0,0
+Rahul/IMG_7036.JPG,front,warn,keep,0.880,1.000,0.400,1.000,1.000,1.000,3073.596,0.850,0.850,feetMissing|tooFar,Feet not in frame,0,0,0,0
+Rahul/IMG_7042.JPG,front,warn,keep,0.918,1.000,0.700,1.000,1.000,0.776,2326.665,0.850,0.850,feetMissing,Feet not in frame,0,0,0,0
+Rahul/IMG_7043.JPG,front,warn,keep,0.861,1.000,0.700,1.000,1.000,0.213,640.151,0.850,0.850,feetMissing|stagedPose,Feet not in frame,0,0,0,0
+Rahul/IMG_7045.JPG,front,keep,keep,0.930,1.000,1.000,1.000,1.000,0.298,894.592,0.850,0.850,stagedPose,Good check-in photo,1,0,0,0
+Rahul/IMG_8144.JPG,side,keep,keep,0.876,0.750,1.000,1.000,1.000,0.882,2646.545,0.800,0.350,,Good check-in photo,1,0,0,0
+Thinesh/IMG_9631.JPG,side,warn,warn,0.766,0.875,0.700,0.500,1.000,0.575,1725.139,0.550,0.100,feetMissing|poseUnclear|weakDefinition,Feet not in frame,1,0,0,0
+Thinesh/IMG_9634.JPG,back,warn,keep,0.880,1.000,0.400,1.000,1.000,1.000,3257.192,0.850,0.850,feetMissing|tooFar|stagedPose|weakDefinition,Feet not in frame,0,0,0,0
+Thinesh/IMG_9638.JPG,side,warn,keep,0.769,0.750,0.700,1.000,1.000,0.420,1259.634,0.800,0.350,feetMissing,Feet not in frame,0,0,0,0
+Thinesh/IMG_9639.JPG,side,warn,warn,0.707,0.750,0.700,0.500,1.000,0.545,1634.638,0.450,0.000,feetMissing|poseUnclear,Feet not in frame,1,0,0,0
+Thinesh/IMG_9640.JPG,back,warn,keep,0.880,1.000,0.400,1.000,1.000,1.000,4044.387,0.850,0.850,feetMissing|tooFar|stagedPose,Feet not in frame,0,0,0,0
+Thinesh/IMG_9641.JPG,front,warn,keep,0.940,1.000,0.700,1.000,1.000,1.000,3607.377,0.850,0.850,feetMissing|stagedPose,Feet not in frame,0,0,0,0
+Thinesh/IMG_9643.JPG,front,warn,keep,0.927,1.000,0.700,1.000,1.000,0.874,2623.232,0.850,0.850,feetMissing|stagedPose,Feet not in frame,0,0,0,0
+Thinesh/IMG_9647.JPG,side,warn,warn,0.699,0.750,0.700,0.500,1.000,0.463,1389.964,0.550,0.100,feetMissing|poseUnclear,Feet not in frame,1,0,0,0
+Thinesh/IMG_9649.JPG,front,warn,keep,0.823,0.750,0.700,1.000,1.000,0.957,2870.200,0.850,0.850,feetMissing|stagedPose,Feet not in frame,0,0,0,0
