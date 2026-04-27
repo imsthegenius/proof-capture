@@ -13,13 +13,13 @@ struct PermissionStep: View {
                 .frame(height: ProofTheme.spacingXXL * 2)
 
             Text("Almost ready")
-                .proofFont(24, weight: .light, relativeTo: .title2)
-                .foregroundStyle(ProofTheme.textPrimary)
+                .proofFont(40, weight: .medium, relativeTo: .largeTitle)
+                .foregroundStyle(ProofTheme.inkPrimary)
                 .accessibilityAddTraits(.isHeader)
 
             Text("We need camera access to capture\nyour progress photos.")
-                .proofFont(15, weight: .light, relativeTo: .body)
-                .foregroundStyle(ProofTheme.textSecondary)
+                .proofFont(15, weight: .regular, relativeTo: .body)
+                .foregroundStyle(ProofTheme.inkSoft)
                 .multilineTextAlignment(.center)
                 .lineSpacing(6)
                 .padding(.top, ProofTheme.spacingMD)
@@ -29,8 +29,8 @@ struct PermissionStep: View {
             // Voice choice
             VStack(spacing: ProofTheme.spacingSM) {
                 Text("Guide voice")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                    .foregroundStyle(ProofTheme.textTertiary)
+                    .proofFont(13, weight: .medium, relativeTo: .footnote)
+                    .foregroundStyle(ProofTheme.inkSoft)
 
                 HStack(spacing: ProofTheme.spacingMD) {
                     voiceButton(label: "Male", value: 0)
@@ -44,7 +44,7 @@ struct PermissionStep: View {
             if permissionDenied {
                 VStack(spacing: ProofTheme.spacingMD) {
                     Text("Camera access is required.\nEnable it in Settings to continue.")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
+                        .proofFont(13, weight: .regular, relativeTo: .footnote)
                         .foregroundStyle(ProofTheme.statusPoor)
                         .multilineTextAlignment(.center)
 
@@ -56,20 +56,20 @@ struct PermissionStep: View {
                     } label: {
                         Text("Open Settings")
                     }
-                    .buttonStyle(ProofTheme.ProofSecondaryButtonStyle())
+                    .buttonStyle(.plain)
+                    .liquidGlassCapsule(.paperLight)
                     .padding(.horizontal, ProofTheme.spacingXL)
                     .accessibilityLabel("Open Settings to grant camera access")
                 }
                 .padding(.bottom, ProofTheme.spacingMD)
             }
 
-            Button(action: {
+            LiquidGlassButton(variant: .paperLight, action: {
                 ProofTheme.hapticLight()
                 Task { await requestCameraAccess() }
             }) {
                 Text("Continue")
             }
-            .buttonStyle(ProofTheme.ProofButtonStyle())
             .padding(.horizontal, ProofTheme.spacingXL)
             .padding(.bottom, ProofTheme.spacingXXL)
             .accessibilityLabel("Grant camera access and continue")
@@ -117,22 +117,22 @@ struct PermissionStep: View {
         } label: {
             HStack(spacing: ProofTheme.spacingSM) {
                 Text(label)
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(isSelected ? ProofTheme.background : ProofTheme.textPrimary)
+                    .proofFont(15, weight: .medium, relativeTo: .body)
+                    .foregroundStyle(isSelected ? ProofTheme.paperHi : ProofTheme.inkPrimary)
 
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .light))
-                        .foregroundStyle(ProofTheme.background)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ProofTheme.paperHi)
                         .transition(.opacity)
                 }
             }
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
-            .background(isSelected ? ProofTheme.accent : ProofTheme.surface)
+            .background(isSelected ? ProofTheme.inkPrimary : ProofTheme.paperLo)
             .overlay(
                 RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                    .strokeBorder(isSelected ? Color.clear : ProofTheme.separator, lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.clear : ProofTheme.inkSoft.opacity(0.18), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
             .scaleEffect(isSelected ? 1.02 : 1.0)

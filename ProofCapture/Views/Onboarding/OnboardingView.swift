@@ -6,7 +6,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            ProofTheme.background.ignoresSafeArea()
+            ProofTheme.paperHi.ignoresSafeArea()
 
             Group {
                 switch currentStep {
@@ -26,7 +26,7 @@ struct OnboardingView: View {
                 HStack(spacing: ProofTheme.spacingSM) {
                     ForEach(0..<3, id: \.self) { step in
                         Circle()
-                            .fill(step == currentStep ? ProofTheme.textPrimary : ProofTheme.textTertiary)
+                            .fill(step == currentStep ? ProofTheme.inkPrimary : ProofTheme.inkSoft.opacity(0.35))
                             .frame(width: 6, height: 6)
                     }
                 }

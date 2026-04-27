@@ -3,77 +3,34 @@ import SwiftUI
 
 struct AuthView: View {
     @Environment(AuthManager.self) private var authManager
-    @State private var titleVisible = false
-    @State private var featuresVisible = false
-    @State private var buttonVisible = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-                .frame(height: ProofTheme.spacingXXL * 2)
+        ZStack {
+            AuthBackdrop()
 
-            VStack(spacing: ProofTheme.spacingSM) {
-                Text("PROOF")
-                    .proofFont(60, weight: .ultraLight, relativeTo: .largeTitle, maximumScaleFactor: 1.25)
-                    .tracking(12)
-                    .foregroundStyle(ProofTheme.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
+            VStack {
+                Spacer()
+                    .frame(height: 124)
 
-                Text("Guided progress photos")
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textSecondary)
-            }
-            .opacity(titleVisible ? 1 : 0)
-            .offset(y: titleVisible ? 0 : 8)
+                VStack(spacing: 10) {
+                    CheckdMark()
+                        .frame(width: 100, height: 100)
+                        .foregroundStyle(ProofTheme.paperHi)
+                        .accessibilityHidden(true)
 
-            Spacer()
-                .frame(height: ProofTheme.spacingXXL)
-
-            VStack(spacing: ProofTheme.spacingXL) {
-                featureRow(icon: "camera.viewfinder", text: "Guided front, side, back poses")
-                featureRow(icon: "waveform", text: "Voice coaching \u{2014} hands-free capture")
-                featureRow(icon: "icloud.and.arrow.up", text: "Private cloud backup")
-            }
-            .padding(.horizontal, ProofTheme.spacingXL)
-            .opacity(featuresVisible ? 1 : 0)
-            .offset(y: featuresVisible ? 0 : 12)
-
-            Spacer()
-
-            VStack(spacing: ProofTheme.spacingMD) {
-                ZStack {
-                    SignInWithAppleButton(.signIn) { request in
-                        authManager.prepareRequest(request)
-                    } onCompletion: { result in
-                        Task { await authManager.handleAppleSignIn(result: result) }
-                    }
-                    .signInWithAppleButtonStyle(.white)
-                    .frame(height: 52)
-                    .clipShape(.capsule)
-                    .accessibilityLabel("Sign in with Apple")
-                    .disabled(authManager.isAuthenticating)
-                    .opacity(authManager.isAuthenticating ? 0.4 : 1)
-
-                    if authManager.isAuthenticating {
-                        ProgressView()
-                            .tint(ProofTheme.textPrimary)
-                    }
+                    CheckdWordmark(text: "checkd", size: 50, tracking: -1.5, onDark: true)
                 }
 
-                Text("Your photos stay private and backed up")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                    .foregroundStyle(ProofTheme.textSecondary)
-            }
-            .padding(.horizontal, ProofTheme.spacingXL)
-            .opacity(buttonVisible ? 1 : 0)
-            .offset(y: buttonVisible ? 0 : 12)
+                Spacer()
 
-            Spacer()
-                .frame(height: ProofTheme.spacingXXL * 2)
+                appleSignInButton
+                    .padding(.horizontal, 13)
+
+                Spacer()
+                    .frame(height: 48)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .proofDynamicType()
-        .background(ProofTheme.background)
         .alert(
             "Sign In Failed",
             isPresented: Binding(
@@ -85,31 +42,90 @@ struct AuthView: View {
         } message: {
             Text(authManager.authError ?? "")
         }
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                titleVisible = true
-            }
-            withAnimation(.easeOut(duration: 0.6).delay(0.2)) {
-                featuresVisible = true
-            }
-            withAnimation(.easeOut(duration: 0.6).delay(0.4)) {
-                buttonVisible = true
-            }
-        }
     }
 
-    private func featureRow(icon: String, text: String) -> some View {
-        HStack(spacing: ProofTheme.spacingMD) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .light))
-                .foregroundStyle(ProofTheme.accent)
-                .frame(width: 28)
-                .accessibilityHidden(true)
-            Text(text)
-                .proofFont(15, weight: .light, relativeTo: .body)
-                .foregroundStyle(ProofTheme.textSecondary)
-            Spacer()
+    private var appleSignInButton: some View {
+        ZStack {
+            HStack(spacing: ProofTheme.spacingSM) {
+                Image(systemName: "apple.logo")
+                    .font(.system(size: 19, weight: .medium))
+                Text(authManager.isAuthenticating ? "Signing In" : "Sign In With Apple")
+                    .font(.system(size: 17, weight: .medium))
+            }
+            .foregroundStyle(ProofTheme.paperHi)
+            .frame(maxWidth: .infinity)
+            .frame(height: 64)
+            .liquidGlassCapsule(.paperDark)
+
+            SignInWithAppleButton(.signIn) { request in
+                authManager.prepareRequest(request)
+            } onCompletion: { result in
+                Task { await authManager.handleAppleSignIn(result: result) }
+            }
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 64)
+            .clipShape(.capsule)
+            .opacity(0.02)
+            .disabled(authManager.isAuthenticating)
+
+            if authManager.isAuthenticating {
+                ProgressView()
+                    .tint(ProofTheme.paperHi)
+                    .offset(x: -82)
+            }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Sign in with Apple")
+    }
+}
+
+private struct AuthBackdrop: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.05, green: 0.045, blue: 0.04),
+                    Color(red: 0.16, green: 0.13, blue: 0.10),
+                    Color(red: 0.03, green: 0.028, blue: 0.024)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(ProofTheme.paperHi.opacity(0.10))
+                    .frame(height: 220)
+                    .rotationEffect(.degrees(-16))
+                    .offset(x: -90, y: 40)
+                Spacer()
+            }
+            .blur(radius: 36)
+
+            LinearGradient(
+                colors: [Color.black.opacity(0.16), Color.black.opacity(0.70)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct CheckdMark: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .frame(width: 42, height: 42)
+                .offset(x: -20, y: -20)
+            Circle()
+                .frame(width: 42, height: 42)
+                .offset(x: 20, y: -20)
+            Circle()
+                .frame(width: 42, height: 42)
+                .offset(x: -20, y: 20)
+            Circle()
+                .frame(width: 42, height: 42)
+                .offset(x: 20, y: 20)
+        }
     }
 }

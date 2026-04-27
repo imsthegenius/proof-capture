@@ -18,8 +18,8 @@ struct SettingsView: View {
                 // Guide voice
                 VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
                     Text("Guide voice")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .proofFont(13, weight: .medium, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.inkSoft)
 
                     HStack(spacing: ProofTheme.spacingSM) {
                         settingOption(label: "Male", isSelected: genderRaw == 0) { genderRaw = 0 }
@@ -33,8 +33,8 @@ struct SettingsView: View {
                 // Guidance mode
                 VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
                     Text("Guidance mode")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .proofFont(13, weight: .medium, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.inkSoft)
 
                     HStack(spacing: ProofTheme.spacingSM) {
                         settingOption(label: "Voice", isSelected: guidanceMode == 0) { guidanceMode = 0 }
@@ -48,8 +48,8 @@ struct SettingsView: View {
                 // Countdown
                 VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
                     Text("Countdown")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .proofFont(13, weight: .medium, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.inkSoft)
 
                     HStack(spacing: ProofTheme.spacingSM) {
                         settingOption(label: "3s", isSelected: countdownSeconds == 3) { countdownSeconds = 3 }
@@ -62,10 +62,10 @@ struct SettingsView: View {
                 .padding(.vertical, ProofTheme.spacingXS)
             } header: {
                 Text("CAPTURE")
-                    .proofFont(12, weight: .light, relativeTo: .caption1)
-                    .foregroundStyle(ProofTheme.textTertiary)
+                    .proofFont(12, weight: .medium, relativeTo: .caption1)
+                    .foregroundStyle(ProofTheme.inkSoft)
             }
-            .listRowBackground(ProofTheme.surface)
+            .listRowBackground(ProofTheme.paperLo.opacity(0.72))
 
             // Privacy reassurance
             Section {
@@ -74,10 +74,10 @@ struct SettingsView: View {
                 privacyRow(text: "No sharing, no analytics on photo content")
             } header: {
                 Text("PRIVACY")
-                    .proofFont(12, weight: .light, relativeTo: .caption1)
-                    .foregroundStyle(ProofTheme.textTertiary)
+                    .proofFont(12, weight: .medium, relativeTo: .caption1)
+                    .foregroundStyle(ProofTheme.inkSoft)
             }
-            .listRowBackground(ProofTheme.surface)
+            .listRowBackground(ProofTheme.paperLo.opacity(0.72))
 
             // Sign out
             Section {
@@ -90,22 +90,22 @@ struct SettingsView: View {
                 .foregroundStyle(ProofTheme.statusPoor)
                 .accessibilityLabel("Sign out of your account")
             }
-            .listRowBackground(ProofTheme.surface)
+            .listRowBackground(ProofTheme.paperLo.opacity(0.72))
 
             // About
             Section {
                 VStack(spacing: ProofTheme.spacingSM) {
                     Text("Proof Capture")
-                        .proofFont(15, weight: .light, relativeTo: .body)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .proofFont(15, weight: .medium, relativeTo: .body)
+                        .foregroundStyle(ProofTheme.inkSoft)
 
                     Text("v\(appVersion)")
-                        .proofFont(13, weight: .ultraLight, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .proofFont(13, weight: .regular, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.inkSoft)
 
                     Text("Made for fitness coaches and their clients")
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .proofFont(13, weight: .regular, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.inkSoft)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -117,7 +117,7 @@ struct SettingsView: View {
         }
         .scrollContentBackground(.hidden)
         .proofDynamicType()
-        .background(ProofTheme.background)
+        .background(ProofTheme.paperHi)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -131,22 +131,22 @@ struct SettingsView: View {
         } label: {
             HStack(spacing: ProofTheme.spacingSM) {
                 Text(label)
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(isSelected ? ProofTheme.background : ProofTheme.textPrimary)
+                    .proofFont(15, weight: .medium, relativeTo: .body)
+                    .foregroundStyle(isSelected ? ProofTheme.paperHi : ProofTheme.inkPrimary)
 
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .light))
-                        .foregroundStyle(ProofTheme.background)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ProofTheme.paperHi)
                         .transition(.opacity)
                 }
             }
             .frame(maxWidth: .infinity)
             .frame(minHeight: 44)
-            .background(isSelected ? ProofTheme.accent : ProofTheme.elevated)
+            .background(isSelected ? ProofTheme.inkPrimary : ProofTheme.paperLo)
             .overlay(
                 RoundedRectangle(cornerRadius: ProofTheme.radiusSM)
-                    .strokeBorder(isSelected ? Color.clear : ProofTheme.separator, lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.clear : ProofTheme.inkSoft.opacity(0.18), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusSM))
         }
@@ -157,8 +157,8 @@ struct SettingsView: View {
     private func privacyRow(text: String) -> some View {
         Label {
             Text(text)
-                .proofFont(15, weight: .light, relativeTo: .body)
-                .foregroundStyle(ProofTheme.textSecondary)
+                .proofFont(15, weight: .regular, relativeTo: .body)
+                .foregroundStyle(ProofTheme.inkPrimary)
         } icon: {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 16, weight: .regular))

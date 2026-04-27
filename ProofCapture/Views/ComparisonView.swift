@@ -23,7 +23,7 @@ struct ComparisonView: View {
             dateLabels
         }
         .proofDynamicType()
-        .background(ProofTheme.background)
+        .background(ProofTheme.paperHi)
         .navigationTitle("Compare")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -47,11 +47,11 @@ struct ComparisonView: View {
                 } label: {
                     VStack(spacing: ProofTheme.spacingXS) {
                         Text(pose.title)
-                            .proofFont(13, weight: .light, relativeTo: .footnote)
-                            .foregroundStyle(selectedPose == pose ? ProofTheme.textPrimary : ProofTheme.textTertiary)
+                            .proofFont(13, weight: .medium, relativeTo: .footnote)
+                            .foregroundStyle(selectedPose == pose ? ProofTheme.inkPrimary : ProofTheme.inkSoft)
 
                         Rectangle()
-                            .fill(selectedPose == pose ? ProofTheme.accent : Color.clear)
+                            .fill(selectedPose == pose ? ProofTheme.inkPrimary : Color.clear)
                             .frame(height: 1)
                     }
                     .frame(maxWidth: .infinity)
@@ -104,12 +104,12 @@ struct ComparisonView: View {
                     .accessibilityLabel("\(pose.title) photo from \(session.date.formatted(.dateTime.month(.abbreviated).day()))")
             } else {
                 Rectangle()
-                    .fill(ProofTheme.surface)
+                    .fill(ProofTheme.paperLo)
                     .frame(maxWidth: .infinity, maxHeight: availableHeight)
                     .overlay(
                         Text("No photo")
-                            .proofFont(13, weight: .light, relativeTo: .footnote)
-                            .foregroundStyle(ProofTheme.textTertiary)
+                            .proofFont(13, weight: .regular, relativeTo: .footnote)
+                            .foregroundStyle(ProofTheme.inkSoft)
                     )
                     .accessibilityLabel("No \(pose.title) photo available")
             }
@@ -121,7 +121,7 @@ struct ComparisonView: View {
     private var dateLabels: some View {
         VStack(spacing: ProofTheme.spacingSM) {
             Text(weekDifferenceText)
-                .proofFont(12, weight: .light, relativeTo: .caption1)
+                .proofFont(12, weight: .medium, relativeTo: .caption1)
                 .foregroundStyle(ProofTheme.statusGood)
                 .padding(.horizontal, ProofTheme.spacingMD)
                 .padding(.vertical, ProofTheme.spacingXS + 2)
@@ -131,11 +131,11 @@ struct ComparisonView: View {
             HStack {
                 VStack(spacing: 2) {
                     Text("Earlier")
-                        .proofFont(11, weight: .light, relativeTo: .caption2)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .proofFont(11, weight: .medium, relativeTo: .caption2)
+                        .foregroundStyle(ProofTheme.inkSoft)
                     Text(earlierSession.date.formatted(.dateTime.month(.abbreviated).day()))
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textSecondary)
+                        .proofFont(13, weight: .regular, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.inkPrimary)
                 }
                 .frame(maxWidth: .infinity)
                 .accessibilityElement(children: .combine)
@@ -143,11 +143,11 @@ struct ComparisonView: View {
 
                 VStack(spacing: 2) {
                     Text("Recent")
-                        .proofFont(11, weight: .light, relativeTo: .caption2)
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .proofFont(11, weight: .medium, relativeTo: .caption2)
+                        .foregroundStyle(ProofTheme.inkSoft)
                     Text(recentSession.date.formatted(.dateTime.month(.abbreviated).day()))
-                        .proofFont(13, weight: .light, relativeTo: .footnote)
-                        .foregroundStyle(ProofTheme.textSecondary)
+                        .proofFont(13, weight: .regular, relativeTo: .footnote)
+                        .foregroundStyle(ProofTheme.inkPrimary)
                 }
                 .frame(maxWidth: .infinity)
                 .accessibilityElement(children: .combine)

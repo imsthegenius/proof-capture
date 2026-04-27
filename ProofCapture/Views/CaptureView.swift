@@ -6,6 +6,8 @@ struct CaptureView: View {
     let poseDetector: PoseDetector
     let lightingAnalyzer: LightingAnalyzer
     let currentPose: Pose
+    let manualCaptureDisabled: Bool
+    let onManualCapture: () -> Void
 
     @AppStorage("guidanceMode") private var guidanceModeRawValue = GuidanceMode.voice.rawValue
 
@@ -26,45 +28,15 @@ struct CaptureView: View {
         guidanceMode == .text
     }
 
-    // MARK: - Border glow properties
-
-    private var borderColor: Color {
-        switch overallStatus {
-        case .good:
-            return ProofTheme.borderReady
-        case .fair:
-            return ProofTheme.borderAlmost
-        case .poor:
-            return poseDetector.bodyDetected ? ProofTheme.borderNeutral : .clear
-        }
-    }
-
-    private var borderWidth: CGFloat {
-        if readinessLocked && overallStatus == .good {
-            return 6
-        }
-
-        switch overallStatus {
-        case .good:
-            return ProofTheme.borderWidthReady
-        case .fair:
-            return ProofTheme.borderWidthAlmost
-        case .poor:
-            return ProofTheme.borderWidthNeutral
-        }
-    }
-
     @State private var amberPulseActive = false
     @State private var readinessLocked = false
 
-    private var borderOpacity: Double {
+    private var cameraFrameState: CameraFrame.BorderState {
+        guard poseDetector.bodyDetected else { return .hidden }
         switch overallStatus {
-        case .good:
-            return 1.0
-        case .fair:
-            return amberPulseActive ? 1.0 : 0.6
-        case .poor:
-            return 1.0
+        case .good: return .ready
+        case .fair: return .almost
+        case .poor: return .neutral
         }
     }
 
@@ -81,9 +53,15 @@ struct CaptureView: View {
                 overallStatus: overallStatus
             )
 
+            CameraFrame(borderState: cameraFrameState)
+                .opacity(overallStatus == .fair && amberPulseActive ? 0.72 : 1)
+
+            CameraScrim(position: .top)
+            CameraScrim(position: .bottom)
+
             if !poseDetector.bodyDetected {
                 Text("Step into frame")
-                    .font(.system(size: 40, weight: .ultraLight))
+                    .font(.system(size: 40, weight: .medium))
                     .foregroundStyle(ProofTheme.overlayText.opacity(0.8))
                     .transition(.opacity)
             }
@@ -99,7 +77,7 @@ struct CaptureView: View {
                     .font(.system(size: 12, weight: .regular))
                     .tracking(4)
                     .foregroundStyle(ProofTheme.overlayText.opacity(0.4))
-                    .padding(.bottom, ProofTheme.spacingXL)
+                    .padding(.bottom, 118)
                     .id(currentPose)
                     .transition(.asymmetric(
                         insertion: .offset(y: 8).combined(with: .opacity),
@@ -117,10 +95,10 @@ struct CaptureView: View {
                         cameraManager.switchCamera()
                     } label: {
                         Image(systemName: "camera.rotate")
-                            .font(.system(size: 17, weight: .light))
+                            .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(ProofTheme.overlayText)
                             .frame(width: 52, height: 52)
-                            .modifier(GlassCircle())
+                            .liquidGlassCapsule(.paperDark)
                     }
                     .accessibilityLabel("Switch camera")
                 }
@@ -130,12 +108,12 @@ struct CaptureView: View {
                 Spacer()
             }
 
-            RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                .stroke(borderColor.opacity(borderOpacity), lineWidth: borderWidth)
-                .ignoresSafeArea()
-                .animation(.easeInOut(duration: ProofTheme.animationSlow), value: overallStatus)
-                .animation(.easeInOut(duration: ProofTheme.animationDefault), value: readinessLocked)
-                .allowsHitTesting(false)
+            VStack {
+                Spacer()
+                CaptureButton(action: onManualCapture, disabled: manualCaptureDisabled)
+                    .accessibilityLabel("Manual capture")
+                    .padding(.bottom, 24)
+            }
         }
         .animation(.easeInOut(duration: ProofTheme.animationEntrance), value: poseDetector.bodyDetected)
         .onChange(of: overallStatus) { oldValue, newValue in
@@ -228,11 +206,11 @@ struct CaptureView: View {
 
     private func feedbackPill(text: String, accent: Color) -> some View {
         Text(text)
-            .font(.system(size: 13, weight: .light))
+            .font(.system(size: 13, weight: .medium))
             .multilineTextAlignment(.center)
             .foregroundStyle(ProofTheme.overlayText)
-            .padding(.vertical, 10)
-            .padding(.horizontal, 14)
+            .padding(.vertical, ProofTheme.spacingSM)
+            .padding(.horizontal, ProofTheme.spacingMD)
             .frame(maxWidth: 320)
             .background(ProofTheme.overlayPill)
             .overlay(
@@ -240,19 +218,5 @@ struct CaptureView: View {
                     .stroke(accent.opacity(0.35), lineWidth: 1)
             )
             .clipShape(Capsule())
-    }
-}
-
-// MARK: - Glass Circle Modifier
-
-private struct GlassCircle: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content.glassEffect(.regular, in: .circle)
-        } else {
-            content
-                .background(ProofTheme.overlayScrim)
-                .clipShape(Circle())
-        }
     }
 }

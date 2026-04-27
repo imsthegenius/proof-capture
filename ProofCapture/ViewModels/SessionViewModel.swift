@@ -4,6 +4,7 @@ import SwiftUI
 import UIKit
 
 enum SessionPhase {
+    case preCaptureInstruction
     case positioning
     case countdown
     case capturing
@@ -88,6 +89,16 @@ final class SessionViewModel {
             return
         }
 
+        if activeSession == nil && capturedImages.isEmpty {
+            phase = .preCaptureInstruction
+        } else {
+            phase = .positioning
+            await resumeCapturePipeline(playPrompt: true)
+        }
+    }
+
+    func continueFromPreCaptureInstruction() async {
+        guard phase == .preCaptureInstruction else { return }
         phase = .positioning
         await resumeCapturePipeline(playPrompt: true)
     }
@@ -111,7 +122,7 @@ final class SessionViewModel {
 
         switch newPhase {
         case .active:
-            if phase != .complete {
+            if phase != .complete && phase != .preCaptureInstruction {
                 Task { await resumeCapturePipeline(playPrompt: false) }
             }
         case .inactive, .background:
@@ -142,7 +153,7 @@ final class SessionViewModel {
         audioGuide.stop()
         cameraManager.stopSession()
 
-        if phase != .complete {
+        if phase != .complete && phase != .preCaptureInstruction {
             phase = .positioning
         }
 

@@ -90,7 +90,7 @@ struct ReviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .proofDynamicType()
-        .background(ProofTheme.background)
+        .background(ProofTheme.paperHi)
         .toolbar(.hidden, for: .navigationBar)
         .alert("Delete Session", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -120,8 +120,8 @@ struct ReviewView: View {
 
     private var titleSection: some View {
         Text(titleText)
-            .proofFont(24, weight: .light, relativeTo: .title2)
-            .foregroundStyle(ProofTheme.textPrimary)
+            .proofFont(40, weight: .medium, relativeTo: .largeTitle)
+            .foregroundStyle(ProofTheme.inkPrimary)
             .padding(.top, ProofTheme.spacingXL)
             .accessibilityAddTraits(.isHeader)
             .opacity(hasAppeared ? 1 : 0)
@@ -164,19 +164,19 @@ struct ReviewView: View {
                 }
             } else {
                 RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                    .fill(ProofTheme.surface)
+                    .fill(ProofTheme.paperLo)
                     .frame(width: width, height: width * 1.6)
                     .overlay(
                         Text("--")
-                            .proofFont(15, weight: .light, relativeTo: .body)
-                            .foregroundStyle(ProofTheme.textTertiary)
+                            .proofFont(15, weight: .medium, relativeTo: .body)
+                            .foregroundStyle(ProofTheme.inkSoft)
                     )
                     .accessibilityLabel("\(pose.title) photo not taken")
             }
 
             Text(pose.title)
-                .proofFont(12, weight: .light, relativeTo: .caption1)
-                .foregroundStyle(ProofTheme.textTertiary)
+                .proofFont(12, weight: .medium, relativeTo: .caption1)
+                .foregroundStyle(ProofTheme.inkSoft)
         }
         .frame(maxWidth: .infinity)
     }
@@ -192,11 +192,11 @@ struct ReviewView: View {
 
                 if isSaving {
                     Text("Saving\u{2026}")
-                        .proofFont(15, weight: .light, relativeTo: .body)
-                        .foregroundStyle(ProofTheme.textPrimary)
+                        .proofFont(15, weight: .medium, relativeTo: .body)
+                        .foregroundStyle(ProofTheme.inkPrimary)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 52)
-                        .modifier(ProofTheme.PrimaryButtonBackground())
+                        .liquidGlassCapsule(.paperLight)
                         .opacity(savePulse ? 1.0 : 0.4)
                         .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: savePulse)
                         .onAppear { savePulse = true }
@@ -209,8 +209,13 @@ struct ReviewView: View {
                         Task { await saveToCamera() }
                     } label: {
                         Text("Save to Camera Roll")
+                            .proofFont(15, weight: .medium, relativeTo: .body)
+                            .foregroundStyle(ProofTheme.inkPrimary)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 52)
                     }
-                    .buttonStyle(ProofTheme.ProofButtonStyle())
+                    .buttonStyle(.plain)
+                    .liquidGlassCapsule(.paperLight)
                     .accessibilityLabel("Save photos to camera roll")
                 }
             }
@@ -219,8 +224,8 @@ struct ReviewView: View {
                 dismiss()
             } label: {
                 Text("Done")
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textSecondary)
+                    .proofFont(15, weight: .medium, relativeTo: .body)
+                    .foregroundStyle(ProofTheme.inkSoft)
                     .frame(minHeight: 44)
             }
             .accessibilityLabel("Close review")
@@ -231,7 +236,7 @@ struct ReviewView: View {
                     showDeleteConfirmation = true
                 } label: {
                     Text("Delete Session")
-                        .proofFont(15, weight: .light, relativeTo: .body)
+                        .proofFont(15, weight: .medium, relativeTo: .body)
                         .foregroundStyle(ProofTheme.statusPoor)
                         .frame(minHeight: 44)
                 }
@@ -244,11 +249,11 @@ struct ReviewView: View {
     private var savedStateBadge: some View {
         HStack(spacing: ProofTheme.spacingSM) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 18, weight: .light))
+                .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(ProofTheme.statusGood)
 
             Text("Saved to Camera Roll")
-                .proofFont(15, weight: .light, relativeTo: .body)
+                .proofFont(15, weight: .medium, relativeTo: .body)
                 .foregroundStyle(ProofTheme.statusGood)
         }
         .frame(maxWidth: .infinity)
@@ -265,19 +270,19 @@ struct ReviewView: View {
     private var saveConfirmationBanner: some View {
         HStack(spacing: ProofTheme.spacingSM) {
             Image(systemName: "checkmark")
-                .font(.system(size: 15, weight: .light))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(ProofTheme.statusGood)
 
             Text("Saved to Photos")
-                .proofFont(13, weight: .light, relativeTo: .footnote)
-                .foregroundStyle(ProofTheme.textSecondary)
+                .proofFont(13, weight: .medium, relativeTo: .footnote)
+                .foregroundStyle(ProofTheme.inkSoft)
 
             Spacer()
         }
         .padding(.horizontal, ProofTheme.spacingMD)
         .padding(.vertical, ProofTheme.spacingSM)
         .frame(maxWidth: .infinity)
-        .background(ProofTheme.surface.opacity(0.94))
+        .background(ProofTheme.paperLo.opacity(0.94))
         .overlay(
             RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
                 .stroke(ProofTheme.statusGood.opacity(0.22), lineWidth: 1)
@@ -293,12 +298,12 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
             HStack(spacing: ProofTheme.spacingSM) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 14, weight: .light))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(ProofTheme.statusFair)
 
                 Text("Quality issues detected")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                    .foregroundStyle(ProofTheme.textPrimary)
+                    .proofFont(13, weight: .medium, relativeTo: .footnote)
+                    .foregroundStyle(ProofTheme.inkPrimary)
 
                 Spacer()
 
@@ -308,8 +313,8 @@ struct ReviewView: View {
                     }
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .light))
-                        .foregroundStyle(ProofTheme.textTertiary)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ProofTheme.inkSoft)
                         .frame(width: 28, height: 28)
                 }
                 .accessibilityLabel("Dismiss quality warning")
@@ -318,11 +323,11 @@ struct ReviewView: View {
             ForEach(warningIssues, id: \.id) { item in
                 HStack(spacing: ProofTheme.spacingSM) {
                     Text("\(item.pose.title):")
-                        .proofFont(12, weight: .light, relativeTo: .caption1)
-                        .foregroundStyle(ProofTheme.textSecondary)
+                        .proofFont(12, weight: .medium, relativeTo: .caption1)
+                        .foregroundStyle(ProofTheme.inkSoft)
 
                     Text(item.issue)
-                        .proofFont(12, weight: .light, relativeTo: .caption1)
+                        .proofFont(12, weight: .regular, relativeTo: .caption1)
                         .foregroundStyle(ProofTheme.statusFair)
 
                     Spacer()
@@ -332,8 +337,8 @@ struct ReviewView: View {
                             onRetake(item.pose)
                         } label: {
                             Text("Retake")
-                                .proofFont(12, weight: .light, relativeTo: .caption1)
-                                .foregroundStyle(ProofTheme.accent)
+                                .proofFont(12, weight: .medium, relativeTo: .caption1)
+                                .foregroundStyle(ProofTheme.inkPrimary)
                         }
                         .accessibilityLabel("Retake \(item.pose.title) photo")
                     }
@@ -341,7 +346,7 @@ struct ReviewView: View {
             }
         }
         .padding(ProofTheme.spacingMD)
-        .background(ProofTheme.surface)
+        .background(ProofTheme.paperLo)
         .overlay(
             RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
                 .stroke(ProofTheme.statusFair.opacity(0.3), lineWidth: 1)
@@ -406,5 +411,4 @@ struct ReviewView: View {
 
 #Preview {
     ReviewView(images: [:])
-        .preferredColorScheme(.dark)
 }

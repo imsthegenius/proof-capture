@@ -12,23 +12,24 @@ struct SessionView: View {
 
     var body: some View {
         ZStack {
-            ProofTheme.background
-                .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                topBar
-                    .padding(.horizontal, ProofTheme.spacingMD)
-                    .padding(.top, ProofTheme.spacingSM)
-
-                Spacer()
-                    .frame(height: ProofTheme.spacingSM)
-
-                mainContent
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                bottomControls
-                    .padding(.horizontal, ProofTheme.spacingMD)
-                    .padding(.bottom, ProofTheme.spacingLG)
+            if viewModel.phase == .preCaptureInstruction {
+                PreCaptureInstructionView(
+                    progress: 0.33,
+                    onContinue: {
+                        Task { @MainActor in
+                            await viewModel.continueFromPreCaptureInstruction()
+                        }
+                    },
+                    onCancel: {
+                        viewModel.endSession(modelContext: modelContext)
+                        dismiss()
+                    }
+                )
+            } else if isCameraPhase {
+                captureStage
+                    .ignoresSafeArea()
+            } else {
+                sessionChrome
             }
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -65,6 +66,38 @@ struct SessionView: View {
         }
     }
 
+    private var isCameraPhase: Bool {
+        switch viewModel.phase {
+        case .positioning, .countdown, .capturing:
+            return true
+        case .preCaptureInstruction, .preview, .complete:
+            return false
+        }
+    }
+
+    private var sessionChrome: some View {
+        ZStack {
+            (viewModel.phase == .complete ? ProofTheme.paperHi : ProofTheme.background)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                topBar
+                    .padding(.horizontal, ProofTheme.spacingMD)
+                    .padding(.top, ProofTheme.spacingSM)
+
+                Spacer()
+                    .frame(height: ProofTheme.spacingSM)
+
+                mainContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                bottomControls
+                    .padding(.horizontal, ProofTheme.spacingMD)
+                    .padding(.bottom, ProofTheme.spacingLG)
+            }
+        }
+    }
+
     private var abortConfirmationBinding: Binding<Bool> {
         Binding(
             get: { viewModel.showAbortConfirmation },
@@ -87,8 +120,8 @@ struct SessionView: View {
                 viewModel.showAbortConfirmation = true
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .light))
-                    .foregroundStyle(ProofTheme.textSecondary)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(viewModel.phase == .complete ? ProofTheme.inkSoft : ProofTheme.textSecondary)
             }
             .accessibilityLabel("End session")
 
@@ -112,18 +145,20 @@ struct SessionView: View {
             }
 
             Text("\(viewModel.currentPose.stepNumber) of 3 — \(viewModel.currentPose.title)")
-                .font(.system(size: 13, weight: .light))
-                .foregroundStyle(ProofTheme.textSecondary)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(viewModel.phase == .complete ? ProofTheme.inkSoft : ProofTheme.textSecondary)
         }
     }
 
     private func stepDotColor(for pose: Pose) -> Color {
+        let isPaperSurface = viewModel.phase == .complete
+
         if viewModel.capturedImages[pose] != nil {
-            return ProofTheme.accent
+            return isPaperSurface ? ProofTheme.inkPrimary : ProofTheme.accent
         } else if pose == viewModel.currentPose {
-            return ProofTheme.textPrimary
+            return isPaperSurface ? ProofTheme.inkPrimary : ProofTheme.textPrimary
         } else {
-            return ProofTheme.textTertiary
+            return isPaperSurface ? ProofTheme.inkSoft.opacity(0.35) : ProofTheme.textTertiary
         }
     }
 
@@ -132,6 +167,8 @@ struct SessionView: View {
     @ViewBuilder
     private var mainContent: some View {
         switch viewModel.phase {
+        case .preCaptureInstruction:
+            EmptyView()
         case .positioning, .countdown, .capturing:
             captureStage
         case .preview:
@@ -147,7 +184,13 @@ struct SessionView: View {
                 cameraManager: viewModel.cameraManager,
                 poseDetector: viewModel.poseDetector,
                 lightingAnalyzer: viewModel.lightingAnalyzer,
-                currentPose: viewModel.currentPose
+                currentPose: viewModel.currentPose,
+                manualCaptureDisabled: viewModel.captureStatusMessage != nil,
+                onManualCapture: {
+                    Task { @MainActor in
+                        await viewModel.beginCountdown()
+                    }
+                }
             )
 
             if viewModel.phase == .countdown {
@@ -178,23 +221,13 @@ struct SessionView: View {
 
     private var countdownOverlay: some View {
         ZStack {
-            ProofTheme.overlayScrim
-                .ignoresSafeArea()
-
-            VStack(spacing: ProofTheme.spacingMD) {
+            VStack(spacing: 24) {
                 Text(viewModel.currentPose.title.uppercased())
-                    .font(.system(size: 15, weight: .light))
+                    .font(.system(size: 15, weight: .medium))
                     .tracking(4)
-                    .foregroundStyle(ProofTheme.overlayText.opacity(0.6))
+                    .foregroundStyle(ProofTheme.paperHi.opacity(0.7))
 
-                Text("\(viewModel.countdownValue)")
-                    .font(.system(size: 120, weight: .ultraLight))
-                    .foregroundStyle(ProofTheme.accent)
-                    .id(viewModel.countdownValue)
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 1.1).combined(with: .opacity),
-                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                    ))
+                CountdownNumeral(value: viewModel.countdownValue)
             }
             .animation(.easeOut(duration: 0.3), value: viewModel.countdownValue)
         }
@@ -209,7 +242,7 @@ struct SessionView: View {
 
             if viewModel.captureFlashOpacity < 0.2 {
                 Text("Hold still")
-                    .font(.system(size: 20, weight: .light))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(ProofTheme.overlayText)
             }
         }
@@ -265,8 +298,8 @@ struct SessionView: View {
     private var completeView: some View {
         VStack(spacing: ProofTheme.spacingLG) {
             Text("Session Complete")
-                .font(.system(size: 24, weight: .light))
-                .foregroundStyle(ProofTheme.textPrimary)
+                .font(.system(size: 40, weight: .medium))
+                .foregroundStyle(ProofTheme.inkPrimary)
                 .opacity(viewModel.showCompleteContent ? 1 : 0)
                 .offset(y: viewModel.showCompleteContent ? 0 : 18)
                 .scaleEffect(viewModel.showCompleteContent ? 1 : 0.98)
@@ -287,11 +320,11 @@ struct SessionView: View {
                                         .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusMD))
 
                                     Text("Tap to retake")
-                                        .font(.system(size: 11, weight: .light))
+                                        .font(.system(size: 11, weight: .medium))
                                         .foregroundStyle(ProofTheme.overlayText.opacity(0.6))
                                         .padding(.vertical, ProofTheme.spacingXS)
                                         .frame(maxWidth: .infinity)
-                                        .background(.black.opacity(0.4))
+                                        .background(ProofTheme.overlayPill.opacity(0.7))
                                         .clipShape(UnevenRoundedRectangle(
                                             bottomLeadingRadius: ProofTheme.radiusMD,
                                             bottomTrailingRadius: ProofTheme.radiusMD
@@ -301,14 +334,14 @@ struct SessionView: View {
                             .accessibilityLabel("Retake \(pose.title) photo")
                         } else {
                             RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
-                                .fill(ProofTheme.surface)
+                                .fill(ProofTheme.paperLo)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 200)
                         }
 
                         Text(pose.title)
-                            .font(.system(size: 12, weight: .light))
-                            .foregroundStyle(ProofTheme.textTertiary)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(ProofTheme.inkSoft)
                     }
                     .opacity(viewModel.showCompleteContent ? 1 : 0)
                     .offset(y: viewModel.showCompleteContent ? 0 : 20)
@@ -350,29 +383,29 @@ struct SessionView: View {
         VStack(alignment: .leading, spacing: ProofTheme.spacingSM) {
             HStack(spacing: ProofTheme.spacingSM) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 14, weight: .light))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(ProofTheme.statusFair)
 
                 Text("Some photos may be hard to compare")
-                    .font(.system(size: 13, weight: .light))
-                    .foregroundStyle(ProofTheme.textPrimary)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(ProofTheme.inkPrimary)
             }
 
             ForEach(qualityWarningIssues, id: \.id) { item in
                 HStack(spacing: ProofTheme.spacingSM) {
                     Text("\(item.pose.title):")
-                        .font(.system(size: 12, weight: .light))
-                        .foregroundStyle(ProofTheme.textSecondary)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(ProofTheme.inkSoft)
 
                     Text(item.issue)
-                        .font(.system(size: 12, weight: .light))
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(ProofTheme.statusFair)
                 }
             }
         }
         .padding(ProofTheme.spacingMD)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ProofTheme.surface)
+        .background(ProofTheme.paperLo)
         .overlay(
             RoundedRectangle(cornerRadius: ProofTheme.radiusMD)
                 .stroke(ProofTheme.statusFair.opacity(0.3), lineWidth: 1)
@@ -386,40 +419,26 @@ struct SessionView: View {
     @ViewBuilder
     private var bottomControls: some View {
         switch viewModel.phase {
-        case .positioning:
-            Button {
-                Task { @MainActor in
-                    await viewModel.beginCountdown()
-                }
-            } label: {
-                Text("capture")
-                    .font(.system(size: 13, weight: .light))
-                    .foregroundStyle(ProofTheme.textTertiary)
-            }
-            .accessibilityLabel("Manual capture")
-            .disabled(viewModel.captureStatusMessage != nil)
-
-        case .countdown, .capturing, .preview:
+        case .preCaptureInstruction, .positioning, .countdown, .capturing, .preview:
             EmptyView()
 
         case .complete:
             VStack(spacing: ProofTheme.spacingSM) {
-                Button {
+                LiquidGlassButton(variant: .paperLight, action: {
                     Task { @MainActor in
                         await viewModel.saveAndFinish(modelContext: modelContext)
                         dismiss()
                     }
-                } label: {
+                }) {
                     Text("Save to Camera Roll")
                 }
-                .buttonStyle(ProofTheme.ProofButtonStyle())
 
                 Button {
                     dismiss()
                 } label: {
                     Text("Done")
-                        .font(.system(size: 15, weight: .light))
-                        .foregroundStyle(ProofTheme.textSecondary)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(ProofTheme.inkSoft)
                 }
                 .padding(.top, ProofTheme.spacingSM)
             }
@@ -434,26 +453,28 @@ struct SessionView: View {
     private func recoveryOverlay(message: String) -> some View {
         VStack(spacing: ProofTheme.spacingMD) {
             Text(message)
-                .font(.system(size: 15, weight: .light))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(ProofTheme.overlayText)
                 .multilineTextAlignment(.center)
 
             if viewModel.cameraManager.needsPermissionRecovery {
-                Button("Open Settings") {
+                LiquidGlassButton(action: {
                     openSettings()
+                }) {
+                    Text("Open Settings")
                 }
-                .buttonStyle(ProofTheme.ProofButtonStyle())
             } else {
-                Button("Retry") {
+                LiquidGlassButton(action: {
                     Task { @MainActor in
                         await viewModel.resumeCapturePipeline(playPrompt: false)
                     }
+                }) {
+                    Text("Retry")
                 }
-                .buttonStyle(ProofTheme.ProofButtonStyle())
             }
         }
         .padding(ProofTheme.spacingLG)
-        .background(.black.opacity(0.72))
+        .background(ProofTheme.overlayPill)
         .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusLG))
         .padding(.horizontal, ProofTheme.spacingMD)
     }
@@ -480,5 +501,4 @@ private struct CheckmarkShape: Shape {
 
 #Preview {
     SessionView()
-        .preferredColorScheme(.dark)
 }
