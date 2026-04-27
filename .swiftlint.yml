@@ -1,0 +1,45 @@
+# Proof Capture SwiftLint config
+# v12 migration mode: warn while legacy screens are converted, then flip to error in cleanup.
+
+included:
+  - ProofCapture
+
+excluded:
+  - .build
+  - DerivedData
+  - .claude
+  - docs
+
+disabled_rules:
+  - line_length
+  - file_length
+  - type_body_length
+  - function_body_length
+  - identifier_name
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - sorted_imports
+
+custom_rules:
+  disallowed_font_weights:
+    name: "Disallowed font weight (v12 migration)"
+    regex: '\.fontWeight\(\.(ultraLight|thin|light|heavy|black)\)|weight:\s*\.(ultraLight|thin|light|heavy|black)'
+    message: "v12 bans .ultraLight/.thin/.light/.heavy/.black. Use .regular, .medium, or .semibold."
+    severity: warning
+
+  disallowed_bold_weight:
+    name: "Disallowed bold font weight (v12 migration)"
+    regex: '\.fontWeight\(\.bold\)|weight:\s*\.bold'
+    message: "Only ProofCapture/Theme/Components/CountdownNumeral.swift may use .bold."
+    severity: warning
+    excluded:
+      - ProofCapture/Theme/Components/CountdownNumeral.swift
+
+  animation_without_value:
+    name: "Animation without value:"
+    regex: '\.animation\([^,)]+\)(?!\s*\{)'
+    message: "Use .animation(_:value:) so animations stay scoped to the state change."
+    severity: warning

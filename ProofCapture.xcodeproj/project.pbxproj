@@ -49,6 +49,13 @@
 		248693226403F21031B05F8A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57301627A44ECC0429ED1189 /* ContentView.swift */; };
 		24AF2C59BE7F6BC863765EB3 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A427F3031BBD88A31E8F38 /* SyncManager.swift */; };
 		473D9A0D30ED791BDEE8E80A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A39E4699DCC5F49D0C30783 /* Theme.swift */; };
+		AA0000010000000000000001 /* GlassChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000010000000000000001 /* GlassChrome.swift */; };
+		AA0000010000000000000002 /* TabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000010000000000000002 /* TabBar.swift */; };
+		AA0000010000000000000003 /* CameraChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000010000000000000003 /* CameraChrome.swift */; };
+		AA0000010000000000000004 /* CountdownNumeral.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000010000000000000004 /* CountdownNumeral.swift */; };
+		AA0000010000000000000005 /* PhotoTileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000010000000000000005 /* PhotoTileView.swift */; };
+		AA0000010000000000000006 /* InstructionHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000010000000000000006 /* InstructionHero.swift */; };
+		AA0000010000000000000007 /* CheckdWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000010000000000000007 /* CheckdWordmark.swift */; };
 		49420C6BE97DC5B45DBC98E0 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = E83A2880857034BF2FEA30A3 /* Supabase */; };
 		52E994F3514E9E9A0A7BD152 /* AudioGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200EBD3D73D02DBBB9A2D15A /* AudioGuide.swift */; };
 		6212CE9D643905FFC0B96DCC /* SessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D576AAEE18DCE3DA341D1F90 /* SessionView.swift */; };
@@ -115,6 +122,13 @@
 		0501AF404EA0B25AD0C6F0F2 /* transition_side_to_back.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.x-m4a; path = transition_side_to_back.m4a; sourceTree = "<group>"; };
 
 		0A0095E1484CF0A9A2253C82 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
+		AB0000010000000000000001 /* GlassChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassChrome.swift; sourceTree = "<group>"; };
+		AB0000010000000000000002 /* TabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBar.swift; sourceTree = "<group>"; };
+		AB0000010000000000000003 /* CameraChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChrome.swift; sourceTree = "<group>"; };
+		AB0000010000000000000004 /* CountdownNumeral.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownNumeral.swift; sourceTree = "<group>"; };
+		AB0000010000000000000005 /* PhotoTileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoTileView.swift; sourceTree = "<group>"; };
+		AB0000010000000000000006 /* InstructionHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstructionHero.swift; sourceTree = "<group>"; };
+		AB0000010000000000000007 /* CheckdWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckdWordmark.swift; sourceTree = "<group>"; };
 		0DC159EF1EB0DCE295111826 /* SyncStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatus.swift; sourceTree = "<group>"; };
 		0F0F52DF3481A9B22343AB76 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1D1CFD325B029E856091D1CA /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -227,9 +241,24 @@
 		2E843DB24518B897621334A4 /* Theme */ = {
 			isa = PBXGroup;
 			children = (
+				AC0000010000000000000001 /* Components */,
 				7A39E4699DCC5F49D0C30783 /* Theme.swift */,
 			);
 			path = Theme;
+			sourceTree = "<group>";
+		};
+		AC0000010000000000000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				AB0000010000000000000003 /* CameraChrome.swift */,
+				AB0000010000000000000007 /* CheckdWordmark.swift */,
+				AB0000010000000000000004 /* CountdownNumeral.swift */,
+				AB0000010000000000000001 /* GlassChrome.swift */,
+				AB0000010000000000000006 /* InstructionHero.swift */,
+				AB0000010000000000000005 /* PhotoTileView.swift */,
+				AB0000010000000000000002 /* TabBar.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		34D4868A973232597D3A95D1 /* Models */ = {
@@ -449,16 +478,22 @@
 				0F3A75EAF94D07BBC12280C6 /* AuthManager.swift in Sources */,
 				BE89A50596322410C9464BFE /* AuthView.swift in Sources */,
 				A483FA349399CB30FDC7512B /* BurstSelector.swift in Sources */,
+				AA0000010000000000000003 /* CameraChrome.swift in Sources */,
 				64940CF72DD395CB35E81BD6 /* CameraManager.swift in Sources */,
 				B5B527780CD51E54FA4CCC77 /* CameraPreview.swift in Sources */,
 				CB7E1FD7927116730A4B674E /* CaptureView.swift in Sources */,
+				AA0000010000000000000007 /* CheckdWordmark.swift in Sources */,
 				7C537C7862263D205FEC5154 /* ComparisonView.swift in Sources */,
 				248693226403F21031B05F8A /* ContentView.swift in Sources */,
+				AA0000010000000000000004 /* CountdownNumeral.swift in Sources */,
 				D0A93502605CCD4C60EDC719 /* FullPhotoView.swift in Sources */,
+				AA0000010000000000000001 /* GlassChrome.swift in Sources */,
 				1D6BDD1BAFD3CB15581FE506 /* HistoryView.swift in Sources */,
 				99D196A461EAC12AE7B5673C /* HomeView.swift in Sources */,
+				AA0000010000000000000006 /* InstructionHero.swift in Sources */,
 				F1FBD044FA82C5F5F242C14A /* LightingAnalyzer.swift in Sources */,
 				6FEA4C6A8C0344202A40AB1B /* OnboardingView.swift in Sources */,
+				AA0000010000000000000005 /* PhotoTileView.swift in Sources */,
 				FA6544E66117DAF4B988E039 /* PermissionStep.swift in Sources */,
 				FB1A3C4E9D7E82A1C5B04D67 /* PhotoQualityGate.swift in Sources */,
 				B7BA5AD9FBDFBCBD0763AACB /* PhotoSession.swift in Sources */,
@@ -475,6 +510,7 @@
 				F74A52A301CFEE2C837DA1EE /* SupabaseClient.swift in Sources */,
 				24AF2C59BE7F6BC863765EB3 /* SyncManager.swift in Sources */,
 				0A7269AC94454AA45E6A005E /* SyncStatus.swift in Sources */,
+				AA0000010000000000000002 /* TabBar.swift in Sources */,
 				473D9A0D30ED791BDEE8E80A /* Theme.swift in Sources */,
 				6F508A896AE98B2879F9D83E /* UserPreferences.swift in Sources */,
 				818D93C84A7E405515AF7FF1 /* WelcomeStep.swift in Sources */,
