@@ -11,8 +11,8 @@ struct SetupGuideStep: View {
                 .frame(height: ProofTheme.spacingXXL * 2)
 
             Text("Setup")
-                .proofFont(24, weight: .light, relativeTo: .title2)
-                .foregroundStyle(ProofTheme.textPrimary)
+                .proofFont(40, weight: .medium, relativeTo: .largeTitle)
+                .foregroundStyle(ProofTheme.inkPrimary)
                 .accessibilityAddTraits(.isHeader)
 
             Spacer()
@@ -41,8 +41,8 @@ struct SetupGuideStep: View {
             .padding(.horizontal, ProofTheme.spacingXL)
 
             Text("Your photos stay completely private. Only you can see them.")
-                .proofFont(13, weight: .light, relativeTo: .footnote)
-                .foregroundStyle(ProofTheme.textSecondary)
+                .proofFont(13, weight: .regular, relativeTo: .footnote)
+                .foregroundStyle(ProofTheme.inkSoft)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .padding(.horizontal, ProofTheme.spacingXL)
@@ -50,13 +50,12 @@ struct SetupGuideStep: View {
 
             Spacer()
 
-            Button(action: {
+            LiquidGlassButton(variant: .paperLight, action: {
                 ProofTheme.hapticLight()
                 onNext()
             }) {
                 Text("Continue")
             }
-            .buttonStyle(ProofTheme.ProofButtonStyle())
             .padding(.horizontal, ProofTheme.spacingXL)
             .padding(.bottom, ProofTheme.spacingXXL)
             .accessibilityLabel("Continue to permissions")
@@ -74,19 +73,19 @@ struct SetupGuideStep: View {
     private func guideRow(index: Int, number: String, title: String, detail: String) -> some View {
         HStack(alignment: .top, spacing: ProofTheme.spacingMD) {
             Text(number)
-                .proofFont(34, weight: .ultraLight, relativeTo: .largeTitle)
-                .foregroundStyle(ProofTheme.accent)
+                .proofFont(34, weight: .medium, relativeTo: .largeTitle)
+                .foregroundStyle(ProofTheme.inkPrimary)
                 .frame(width: 36)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: ProofTheme.spacingXS) {
                 Text(title)
-                    .proofFont(17, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textPrimary)
+                    .proofFont(17, weight: .medium, relativeTo: .body)
+                    .foregroundStyle(ProofTheme.inkPrimary)
 
                 Text(detail)
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                    .foregroundStyle(ProofTheme.textSecondary)
+                    .proofFont(13, weight: .regular, relativeTo: .footnote)
+                    .foregroundStyle(ProofTheme.inkSoft)
                     .lineSpacing(4)
             }
         }

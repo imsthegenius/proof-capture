@@ -11,17 +11,17 @@ struct WelcomeStep: View {
         VStack(spacing: 0) {
             Spacer()
 
-            Text("PROOF")
-                .proofFont(60, weight: .ultraLight, relativeTo: .largeTitle, maximumScaleFactor: 1.25)
-                .tracking(12)
-                .foregroundStyle(ProofTheme.textPrimary)
+            Text("checkd")
+                .proofFont(58, weight: .medium, relativeTo: .largeTitle, maximumScaleFactor: 1.15)
+                .tracking(-1.5)
+                .foregroundStyle(ProofTheme.inkPrimary)
                 .opacity(titleVisible ? 1 : 0)
                 .offset(y: titleVisible ? 0 : 8)
                 .accessibilityAddTraits(.isHeader)
 
             Image(systemName: "camera.viewfinder")
-                .font(.system(size: 28, weight: .ultraLight))
-                .foregroundStyle(ProofTheme.textTertiary)
+                .font(.system(size: 28, weight: .regular))
+                .foregroundStyle(ProofTheme.inkSoft)
                 .padding(.top, ProofTheme.spacingLG)
                 .opacity(iconVisible ? 1 : 0)
                 .offset(y: iconVisible ? 0 : 6)
@@ -29,12 +29,12 @@ struct WelcomeStep: View {
 
             VStack(spacing: ProofTheme.spacingSM) {
                 Text("Private. Guided. Consistent.")
-                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                    .foregroundStyle(ProofTheme.textTertiary)
+                    .proofFont(13, weight: .medium, relativeTo: .footnote)
+                    .foregroundStyle(ProofTheme.inkSoft)
 
                 Text("Your phone guides you through\nperfect progress photos.")
-                    .proofFont(17, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textSecondary)
+                    .proofFont(17, weight: .regular, relativeTo: .body)
+                    .foregroundStyle(ProofTheme.inkSoft)
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
             }
@@ -44,13 +44,12 @@ struct WelcomeStep: View {
 
             Spacer()
 
-            Button(action: {
+            LiquidGlassButton(variant: .paperLight, action: {
                 ProofTheme.hapticLight()
                 onNext()
             }) {
                 Text("Begin setup")
             }
-            .buttonStyle(ProofTheme.ProofButtonStyle())
             .padding(.horizontal, ProofTheme.spacingXL)
             .padding(.bottom, ProofTheme.spacingXXL)
             .accessibilityLabel("Get started with onboarding")

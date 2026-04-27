@@ -26,7 +26,7 @@ struct HistoryView: View {
             }
         }
         .proofDynamicType()
-        .background(ProofTheme.background)
+        .background(ProofTheme.paperHi)
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Delete Session", isPresented: $showDeleteConfirmation) {
@@ -51,20 +51,25 @@ struct HistoryView: View {
 
             VStack(spacing: ProofTheme.spacingXS) {
                 Text("0")
-                    .proofFont(48, weight: .ultraLight, relativeTo: .largeTitle)
-                    .foregroundStyle(ProofTheme.accent)
+                    .proofFont(48, weight: .medium, relativeTo: .largeTitle)
+                    .foregroundStyle(ProofTheme.inkPrimary)
 
                 Text("sessions")
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textSecondary)
+                    .proofFont(15, weight: .medium, relativeTo: .body)
+                    .foregroundStyle(ProofTheme.inkSoft)
             }
 
             Spacer()
 
             NavigationLink(destination: SessionView()) {
                 Text("Start your first session")
+                    .proofFont(15, weight: .medium, relativeTo: .body)
+                    .foregroundStyle(ProofTheme.inkPrimary)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 52)
             }
-            .buttonStyle(ProofTheme.ProofButtonStyle())
+            .buttonStyle(.plain)
+            .liquidGlassCapsule(.paperLight)
             .accessibilityLabel("Start your first photo session")
             .padding(.horizontal, ProofTheme.spacingMD)
             .padding(.bottom, ProofTheme.spacingXL)
@@ -81,8 +86,8 @@ struct HistoryView: View {
                     if isCompareMode {
                         VStack(spacing: ProofTheme.spacingSM) {
                             Text("Select 2 sessions to compare")
-                                .proofFont(13, weight: .light, relativeTo: .footnote)
-                                .foregroundStyle(ProofTheme.textTertiary)
+                                .proofFont(13, weight: .regular, relativeTo: .footnote)
+                                .foregroundStyle(ProofTheme.inkSoft)
 
                             if compareSelections.count == 2 {
                                 NavigationLink(destination: ComparisonView(
@@ -90,8 +95,13 @@ struct HistoryView: View {
                                     sessionB: compareSelections[1]
                                 )) {
                                     Text("Compare")
+                                        .proofFont(15, weight: .medium, relativeTo: .body)
+                                        .foregroundStyle(ProofTheme.inkPrimary)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(minHeight: 52)
                                 }
-                                .buttonStyle(ProofTheme.ProofButtonStyle())
+                                .buttonStyle(.plain)
+                                .liquidGlassCapsule(.paperLight)
                             }
 
                             Button {
@@ -99,8 +109,8 @@ struct HistoryView: View {
                                 compareSelections = []
                             } label: {
                                 Text("Cancel")
-                                    .proofFont(13, weight: .light, relativeTo: .footnote)
-                                    .foregroundStyle(ProofTheme.textTertiary)
+                                    .proofFont(13, weight: .medium, relativeTo: .footnote)
+                                    .foregroundStyle(ProofTheme.inkSoft)
                             }
                         }
                         .frame(height: 88)
@@ -111,12 +121,12 @@ struct HistoryView: View {
                         } label: {
                             HStack(spacing: ProofTheme.spacingMD) {
                                 Image(systemName: "arrow.left.and.right")
-                                    .font(.system(size: 15, weight: .light))
-                                    .foregroundStyle(ProofTheme.accent)
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(ProofTheme.inkPrimary)
 
                                 Text("Compare sessions")
-                                    .proofFont(15, weight: .light, relativeTo: .body)
-                                    .foregroundStyle(ProofTheme.textSecondary)
+                                    .proofFont(15, weight: .medium, relativeTo: .body)
+                                    .foregroundStyle(ProofTheme.inkPrimary)
                             }
                             .frame(minHeight: 44)
                         }
@@ -138,12 +148,12 @@ struct HistoryView: View {
 
                                 if compareSelections.contains(where: { $0.id == session.id }) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 20, weight: .light))
-                                        .foregroundStyle(ProofTheme.accent)
+                                        .font(.system(size: 20, weight: .medium))
+                                        .foregroundStyle(ProofTheme.inkPrimary)
                                 } else {
                                     Image(systemName: "circle")
-                                        .font(.system(size: 20, weight: .ultraLight))
-                                        .foregroundStyle(ProofTheme.textTertiary)
+                                        .font(.system(size: 20, weight: .regular))
+                                        .foregroundStyle(ProofTheme.inkSoft)
                                 }
                             }
                         }
@@ -179,13 +189,13 @@ struct HistoryView: View {
         VStack(alignment: .leading, spacing: ProofTheme.spacingMD) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Week \(weekIndex(for: session))")
-                    .proofFont(12, weight: .light, relativeTo: .caption1)
+                    .proofFont(12, weight: .medium, relativeTo: .caption1)
                     .tracking(1.8)
-                    .foregroundStyle(ProofTheme.textTertiary)
+                    .foregroundStyle(ProofTheme.inkSoft)
 
                 Text(session.date.formatted(.dateTime.month(.abbreviated).day().year()))
-                    .proofFont(15, weight: .light, relativeTo: .body)
-                    .foregroundStyle(ProofTheme.textPrimary)
+                    .proofFont(15, weight: .medium, relativeTo: .body)
+                    .foregroundStyle(ProofTheme.inkPrimary)
             }
 
             HStack(spacing: 2) {
@@ -197,11 +207,11 @@ struct HistoryView: View {
         }
         .padding(ProofTheme.spacingLG)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ProofTheme.surface.opacity(0.88))
+        .background(ProofTheme.paperLo.opacity(0.72))
         .clipShape(RoundedRectangle(cornerRadius: ProofTheme.radiusLG))
         .overlay(
             RoundedRectangle(cornerRadius: ProofTheme.radiusLG)
-                .stroke(ProofTheme.separator, lineWidth: 1)
+                .stroke(ProofTheme.inkSoft.opacity(0.12), lineWidth: 1)
         )
     }
 
@@ -217,7 +227,7 @@ struct HistoryView: View {
                 .accessibilityLabel("\(pose.title) photo")
         } else {
             Rectangle()
-                .fill(ProofTheme.surface)
+                .fill(ProofTheme.paperLo)
                 .frame(maxWidth: .infinity)
                 .frame(height: 140)
                 .accessibilityLabel("\(pose.title) photo missing")
@@ -284,7 +294,6 @@ private struct RowRevealModifier: ViewModifier {
 
 #Preview {
     NavigationStack {
-        HistoryView()
+    HistoryView()
     }
-    .preferredColorScheme(.dark)
 }

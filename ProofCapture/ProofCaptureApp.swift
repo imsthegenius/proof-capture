@@ -23,7 +23,6 @@ struct ProofCaptureApp: App {
             switch containerResult {
             case .success(let container):
                 SyncBootstrapView(syncManager: syncManager, authManager: authManager)
-                    .preferredColorScheme(.dark)
                     .environment(\.legibilityWeight, .regular)
                     .environment(authManager)
                     .environment(syncManager)
@@ -32,7 +31,6 @@ struct ProofCaptureApp: App {
                 DataErrorView(error: error) {
                     containerResult = Self.createContainer()
                 }
-                .preferredColorScheme(.dark)
             }
         }
     }
@@ -72,29 +70,29 @@ private struct DataErrorView: View {
     var body: some View {
         VStack(spacing: 24) {
             Text("Data Error")
-                .font(.system(size: 24, weight: .light))
-                .foregroundStyle(ProofTheme.textPrimary)
+                .font(.system(size: 24, weight: .medium))
+                .foregroundStyle(ProofTheme.inkPrimary)
 
             Text("Unable to initialize local storage. Please restart the app or reinstall if the problem persists.")
-                .font(.system(size: 15, weight: .light))
-                .foregroundStyle(ProofTheme.textSecondary)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(ProofTheme.inkSoft)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
             Button(action: retryAction) {
                 Text("Try Again")
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundStyle(ProofTheme.background)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(ProofTheme.paperHi)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(ProofTheme.accent)
+                    .background(ProofTheme.inkPrimary)
                     .clipShape(Capsule())
             }
             .padding(.horizontal, 32)
             .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(ProofTheme.background)
+        .background(ProofTheme.paperHi)
         .onAppear {
             Self.logger.error("ModelContainer failed: \(String(describing: error), privacy: .public)")
         }
